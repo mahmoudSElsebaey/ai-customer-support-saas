@@ -4,12 +4,14 @@ import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { prisma } from "./lib/prisma.js";
 import { initSocket } from "./socket/index.js";
+import { initSentry, captureException } from "./lib/sentry.js";
 
 let httpServer: http.Server | null = null;
 let shuttingDown = false;
 
 async function bootstrap() {
   try {
+    await initSentry();
     await prisma.$connect();
     logger.info("Database connected");
 
@@ -21,12 +23,14 @@ async function bootstrap() {
         {
           port: env.PORT,
           env: env.NODE_ENV,
+          version: "0.13.0",
         },
         "Voxly API listening"
       );
     });
   } catch (error) {
     logger.error({ error }, "Failed to start server");
+    await captureException(error);
     process.exit(1);
   }
 }
@@ -63,10 +67,12 @@ process.on("SIGINT", () => void shutdown("SIGINT"));
 
 process.on("unhandledRejection", (reason) => {
   logger.error({ reason }, "Unhandled rejection");
+  void captureException(reason);
 });
 
 process.on("uncaughtException", (error) => {
   logger.error({ error }, "Uncaught exception");
+  void captureException(error);
   void shutdown("uncaughtException");
 });
 

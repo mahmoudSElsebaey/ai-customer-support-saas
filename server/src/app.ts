@@ -7,6 +7,7 @@ import pinoHttp from "pino-http";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { requestId } from "./middleware/requestId.js";
+import { metricsMiddleware } from "./middleware/metrics.js";
 import { globalLimiter } from "./middleware/rateLimit.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFound } from "./middleware/notFound.js";
@@ -20,6 +21,7 @@ if (env.NODE_ENV === "production") {
 }
 
 app.use(requestId);
+app.use(metricsMiddleware);
 
 app.use(
   pinoHttp({
@@ -55,7 +57,6 @@ app.use(
 
 app.use(compression());
 
-// Stripe webhook needs raw body — must be before express.json()
 app.post(
   "/api/billing/webhook",
   express.raw({ type: "application/json" }),

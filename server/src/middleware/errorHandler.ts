@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import { AppError } from "../utils/AppError.js";
 import { logger } from "../lib/logger.js";
 import { env } from "../config/env.js";
+import { captureException } from "../lib/sentry.js";
 
 export function errorHandler(
   err: Error,
@@ -29,6 +30,7 @@ export function errorHandler(
   if (err instanceof AppError) {
     if (!err.isOperational) {
       logger.error({ err, requestId }, "Non-operational error");
+      void captureException(err, { requestId, code: err.code });
     }
 
     res.status(err.statusCode).json({
@@ -41,6 +43,11 @@ export function errorHandler(
   }
 
   logger.error({ err, requestId }, "Unhandled error");
+  void captureException(err, {
+    requestId,
+    path: req.originalUrl,
+    method: req.method,
+  });
 
   res.status(500).json({
     success: false,

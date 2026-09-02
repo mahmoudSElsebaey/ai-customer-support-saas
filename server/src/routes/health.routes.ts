@@ -1,12 +1,15 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { isAIEnabled } from "../lib/openai.js";
+import { isStripeEnabled } from "../config/plans.js";
 import { env } from "../config/env.js";
+import { getMetricsSnapshot, getUptimeSec } from "../lib/metrics.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();
+const VERSION = "0.13.0";
 
-/** Liveness — process is up */
+/** Liveness */
 router.get(
   "/",
   asyncHandler(async (_req, res) => {
@@ -14,18 +17,21 @@ router.get(
       success: true,
       status: "ok",
       service: "voxly-api",
+      version: VERSION,
+      uptimeSec: getUptimeSec(),
       timestamp: new Date().toISOString(),
     });
   })
 );
 
-/** Readiness — dependencies available */
+/** Readiness — dependencies */
 router.get(
   "/ready",
   asyncHandler(async (_req, res) => {
     const checks: Record<string, "ok" | "degraded" | "down"> = {
       database: "down",
       ai: isAIEnabled() ? "ok" : "degraded",
+      billing: isStripeEnabled() ? "ok" : "degraded",
     };
 
     try {
@@ -40,9 +46,22 @@ router.get(
     res.status(ready ? 200 : 503).json({
       success: ready,
       status: ready ? "ready" : "not_ready",
+      version: VERSION,
       checks,
       env: env.NODE_ENV,
       timestamp: new Date().toISOString(),
+    });
+  })
+);
+
+/** Basic process metrics (no secrets) */
+router.get(
+  "/metrics",
+  asyncHandler(async (_req, res) => {
+    res.json({
+      success: true,
+      version: VERSION,
+      data: getMetricsSnapshot(),
     });
   })
 );

@@ -1,49 +1,56 @@
 # Voxly — AI Customer Support SaaS
 
-> **Status:** Phase 12 — Customer Portal ✅
+> **Status:** Phase 13 — Observability & Polish ✅ · **v0.13.0**
 
-## Customer portal
+Production-oriented multi-tenant helpdesk with AI (RAG), real-time Socket.IO, Stripe billing, and a customer portal.
 
-End-customer help center per organization (public slug):
+## Stack
 
-```
-/portal/:orgSlug/login
-/portal/:orgSlug/register
-/portal/:orgSlug              → my tickets
-/portal/:orgSlug/new          → create ticket
-/portal/:orgSlug/tickets/:id  → conversation (no internal notes)
-/portal/:orgSlug/knowledge    → published articles
-```
+| Layer | Tech |
+|-------|------|
+| Frontend | React, TypeScript, Vite, Tailwind, RTK Query, i18n (EN/AR) |
+| Backend | Express, TypeScript, Prisma, PostgreSQL, Socket.IO |
+| AI | OpenAI chat + embeddings (optional) |
+| Billing | Stripe Checkout + Customer Portal + webhooks |
+| Ops | Helmet, rate limits, pino, metrics, optional Sentry, Docker |
 
-### API
+## Quick start
 
-```
-GET  /api/portal/org/:slug
-POST /api/portal/auth/register
-POST /api/portal/auth/login
-POST /api/portal/auth/logout
-GET  /api/portal/tickets
-POST /api/portal/tickets
-GET  /api/portal/tickets/:id
-POST /api/portal/tickets/:id/messages
-GET  /api/portal/knowledge
-GET  /api/portal/knowledge/:id
+```bash
+# Database
+# set DATABASE_URL in server/.env (see .env.example)
+
+cd server && npm install && npx prisma migrate dev && npm run dev
+cd client && npm install && npm run dev
 ```
 
-- Portal users have role `CUSTOMER` scoped to one organization.
-- CRM `Customer` row is created/linked by email automatically.
-- Tickets are isolated to that customer; internal notes never returned.
-- Messages emit Socket.IO events so agents see updates live.
+## Observability (Phase 13)
 
-Example: if org slug is `acme`, open `http://localhost:5173/portal/acme/register`.
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/health` | Liveness + version + uptime |
+| `GET /api/health/ready` | DB + AI/billing capability flags |
+| `GET /api/health/metrics` | Request counts, latency avg, top paths, memory |
 
-## Phases
+Set `SENTRY_DSN` to enable error reporting (server).
 
-| Phase | Status |
+See [PRODUCTION.md](./PRODUCTION.md) for go-live checklist.
+
+## Product surfaces
+
+- **Agent dashboard** — tickets, customers, knowledge, AI, analytics, billing
+- **Customer portal** — `/portal/:orgSlug` tickets + help center
+
+## Phases completed
+
+| Phase | Topic |
 |-------|--------|
-| 0–11 | ✅ |
-| 12 Customer Portal | ✅ |
-| 13 Observability / polish | Next |
+| 0–3 | Foundation, auth, multi-tenancy, core tickets |
+| 4–5 | Real-time, knowledge base |
+| 6–7 | AI + RAG |
+| 8–9 | Agent workspace, analytics |
+| 10–11 | Production hardening, Stripe |
+| 12–13 | Customer portal, observability |
 
 ## License
 
