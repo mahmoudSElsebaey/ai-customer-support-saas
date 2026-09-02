@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { prisma } from "../lib/prisma.js";
+import mongoose from "mongoose";
+import { Ticket } from "../models/Ticket.js";
+import { Message } from "../models/Message.js";
 import { AppError } from "../utils/AppError.js";
 import {
   getOpenAI,
@@ -29,37 +31,52 @@ function parseJsonFromModel(text: string): unknown {
   return JSON.parse(cleaned);
 }
 
+function requireIds(ticketId: string, organizationId: string) {
+  if (
+    !mongoose.Types.ObjectId.isValid(ticketId) ||
+    !mongoose.Types.ObjectId.isValid(organizationId)
+  ) {
+    throw new AppError("Ticket not found", 404, "TICKET_NOT_FOUND");
+  }
+}
+
 export class AIService {
   isAvailable() {
     return isAIEnabled();
   }
 
   async analyzeTicket(ticketId: string, organizationId: string) {
-    const ticket = await prisma.ticket.findFirst({
-      where: { id: ticketId, organizationId },
-      include: {
-        customer: { select: { name: true, email: true, company: true } },
-        messages: {
-          orderBy: { createdAt: "asc" },
-          take: 30,
-          select: {
-            content: true,
-            type: true,
-            createdAt: true,
-            sender: { select: { name: true, role: true } },
-          },
-        },
-      },
-    });
+    requireIds(ticketId, organizationId);
+
+    const ticket = await Ticket.findOne({
+      _id: ticketId,
+      organizationId,
+    })
+      .populate("customerId", "name email company")
+      .lean()
+      .exec();
 
     if (!ticket) {
       throw new AppError("Ticket not found", 404, "TICKET_NOT_FOUND");
     }
 
+    const messages = await Message.find({ ticketId })
+      .sort({ createdAt: 1 })
+      .limit(30)
+      .populate("senderId", "name role")
+      .lean()
+      .exec();
+
+    const customer = ticket.customerId as unknown as {
+      name?: string;
+      email?: string;
+      company?: string | null;
+    };
+
     const openai = getOpenAI();
     const model = DEFAULT_CHAT_MODEL;
 
-    const conversation = ticket.messages
+    const conversation = messages
       .map((m) => {
         const who =
           m.type === "CUSTOMER"
@@ -86,8 +103,8 @@ Be concise and accurate. Do not invent facts not present in the ticket.`;
 
     const userPrompt = `Ticket subject: ${ticket.subject}
 Description: ${ticket.description ?? "(none)"}
-Customer: ${ticket.customer.name} (${ticket.customer.email})${
-      ticket.customer.company ? ` @ ${ticket.customer.company}` : ""
+Customer: ${customer?.name ?? "Unknown"} (${customer?.email ?? ""})${
+      customer?.company ? ` @ ${customer.company}` : ""
     }
 Current status: ${ticket.status}
 Current priority: ${ticket.priority}
@@ -143,42 +160,40 @@ ${conversation || "(no messages yet)"}`;
     }
   }
 
-  /**
-   * Suggest a reply, optionally grounded in knowledge base via RAG.
-   * Does NOT auto-send to the customer.
-   */
   async suggestReply(
     ticketId: string,
     organizationId: string,
     options: { useRag?: boolean; topK?: number } = {}
   ) {
+    requireIds(ticketId, organizationId);
+
     const useRag = options.useRag !== false;
     const topK = options.topK ?? 4;
 
-    const ticket = await prisma.ticket.findFirst({
-      where: { id: ticketId, organizationId },
-      include: {
-        customer: { select: { name: true } },
-        messages: {
-          orderBy: { createdAt: "asc" },
-          take: 40,
-          select: {
-            content: true,
-            type: true,
-            sender: { select: { name: true, role: true } },
-          },
-        },
-      },
-    });
+    const ticket = await Ticket.findOne({
+      _id: ticketId,
+      organizationId,
+    })
+      .populate("customerId", "name")
+      .lean()
+      .exec();
 
     if (!ticket) {
       throw new AppError("Ticket not found", 404, "TICKET_NOT_FOUND");
     }
 
+    const messages = await Message.find({ ticketId })
+      .sort({ createdAt: 1 })
+      .limit(40)
+      .lean()
+      .exec();
+
+    const customer = ticket.customerId as unknown as { name?: string };
+
     const openai = getOpenAI();
     const model = DEFAULT_CHAT_MODEL;
 
-    const conversation = ticket.messages
+    const conversation = messages
       .filter((m) => m.type !== "INTERNAL_NOTE")
       .map((m) => {
         const who = m.type === "CUSTOMER" ? "Customer" : "Agent";
@@ -229,7 +244,6 @@ ${conversation || "(no messages yet)"}`;
               .join("\n\n");
         }
       } catch (err) {
-        // RAG is enhancement — fall back to non-RAG suggestion
         logger.warn({ err, ticketId }, "RAG retrieval failed; continuing without KB");
       }
     }
@@ -243,7 +257,7 @@ Rules:
 - Keep tone clear and friendly.
 - Output ONLY the reply text (no JSON, no quotes wrapper, no "Subject:").`;
 
-    const userPrompt = `Customer name: ${ticket.customer.name}
+    const userPrompt = `Customer name: ${customer?.name ?? "Customer"}
 Ticket subject: ${ticket.subject}
 
 Conversation so far:
