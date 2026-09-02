@@ -6,6 +6,7 @@ import ticketRoutes from "./ticket.routes.js";
 import knowledgeRoutes from "./knowledge.routes.js";
 import aiRoutes from "./ai.routes.js";
 import cannedRoutes from "./canned.routes.js";
+import analyticsRoutes from "./analytics.routes.js";
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use("/tickets", ticketRoutes);
 router.use("/knowledge", knowledgeRoutes);
 router.use("/ai", aiRoutes);
 router.use("/canned-responses", cannedRoutes);
+router.use("/analytics", analyticsRoutes);
 
 export default router;
