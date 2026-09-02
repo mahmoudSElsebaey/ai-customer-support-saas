@@ -7,6 +7,7 @@ import {
   DEFAULT_CHAT_MODEL,
 } from "../lib/openai.js";
 import { aiUsageService } from "./ai-usage.service.js";
+import { embeddingService } from "./embedding.service.js";
 import { logger } from "../lib/logger.js";
 
 const analysisSchema = z.object({
@@ -33,10 +34,6 @@ export class AIService {
     return isAIEnabled();
   }
 
-  /**
-   * Analyze a ticket: intent, category, priority, sentiment, summary.
-   * Never throws in a way that breaks support — caller handles AI_NOT_CONFIGURED.
-   */
   async analyzeTicket(ticketId: string, organizationId: string) {
     const ticket = await prisma.ticket.findFirst({
       where: { id: ticketId, organizationId },
@@ -147,9 +144,17 @@ ${conversation || "(no messages yet)"}`;
   }
 
   /**
-   * Suggest a reply for the agent. Does NOT send to the customer.
+   * Suggest a reply, optionally grounded in knowledge base via RAG.
+   * Does NOT auto-send to the customer.
    */
-  async suggestReply(ticketId: string, organizationId: string) {
+  async suggestReply(
+    ticketId: string,
+    organizationId: string,
+    options: { useRag?: boolean; topK?: number } = {}
+  ) {
+    const useRag = options.useRag !== false;
+    const topK = options.topK ?? 4;
+
     const ticket = await prisma.ticket.findFirst({
       where: { id: ticketId, organizationId },
       include: {
@@ -181,24 +186,73 @@ ${conversation || "(no messages yet)"}`;
       })
       .join("\n");
 
+    let sources: {
+      id: string;
+      title: string;
+      score: number;
+      category: string | null;
+    }[] = [];
+    let knowledgeBlock = "";
+
+    if (useRag) {
+      try {
+        const query = [
+          ticket.subject,
+          ticket.description ?? "",
+          conversation.slice(-1500),
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        const hits = await embeddingService.search(
+          organizationId,
+          query,
+          topK,
+          0.28
+        );
+
+        sources = hits.map((h) => ({
+          id: h.id,
+          title: h.title,
+          score: Number(h.score.toFixed(4)),
+          category: h.category,
+        }));
+
+        if (hits.length > 0) {
+          knowledgeBlock =
+            "\n\nRelevant knowledge base articles (use only if applicable; do not invent policies):\n" +
+            hits
+              .map(
+                (h, i) =>
+                  `[${i + 1}] ${h.title} (score ${h.score.toFixed(3)})\n${h.contentPreview}`
+              )
+              .join("\n\n");
+        }
+      } catch (err) {
+        // RAG is enhancement — fall back to non-RAG suggestion
+        logger.warn({ err, ticketId }, "RAG retrieval failed; continuing without KB");
+      }
+    }
+
     const systemPrompt = `You are a helpful customer support agent assistant.
 Write a professional, empathetic reply the human agent can send to the customer.
 Rules:
-- Do not invent policies, refunds, or commitments not supported by the conversation.
+- Prefer facts from the provided knowledge base articles when relevant.
+- Do not invent policies, refunds, or commitments not supported by the conversation or knowledge articles.
+- If knowledge is insufficient, say what you can and ask a concise clarifying question.
 - Keep tone clear and friendly.
-- If information is missing, ask a concise clarifying question.
 - Output ONLY the reply text (no JSON, no quotes wrapper, no "Subject:").`;
 
     const userPrompt = `Customer name: ${ticket.customer.name}
 Ticket subject: ${ticket.subject}
 
 Conversation so far:
-${conversation || ticket.description || "(empty)"}`;
+${conversation || ticket.description || "(empty)"}${knowledgeBlock}`;
 
     try {
       const completion = await openai.chat.completions.create({
         model,
-        temperature: 0.5,
+        temperature: 0.45,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -212,7 +266,7 @@ ${conversation || ticket.description || "(empty)"}`;
       if (usage) {
         await aiUsageService.track({
           organizationId,
-          feature: "suggest_reply",
+          feature: sources.length > 0 ? "suggest_reply_rag" : "suggest_reply",
           model,
           promptTokens: usage.prompt_tokens,
           completionTokens: usage.completion_tokens,
@@ -221,6 +275,8 @@ ${conversation || ticket.description || "(empty)"}`;
 
       return {
         suggestion,
+        sources,
+        ragUsed: sources.length > 0,
         model,
         usage: usage
           ? {
@@ -249,6 +305,14 @@ ${conversation || ticket.description || "(empty)"}`;
       model: result.model,
       usage: result.usage,
     };
+  }
+
+  async searchKnowledge(
+    organizationId: string,
+    query: string,
+    topK = 5
+  ) {
+    return embeddingService.search(organizationId, query, topK);
   }
 }
 

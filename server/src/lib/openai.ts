@@ -24,13 +24,12 @@ export function isAIEnabled(): boolean {
   return Boolean(env.OPENAI_API_KEY);
 }
 
-/** Rough cost estimate (USD) for gpt-4o-mini */
+/** Rough cost estimate (USD) */
 export function estimateCost(
   model: string,
   promptTokens: number,
   completionTokens: number
 ): number {
-  // Prices approximate; adjust as needed
   const rates: Record<string, { in: number; out: number }> = {
     "gpt-4o-mini": { in: 0.15 / 1_000_000, out: 0.6 / 1_000_000 },
     "gpt-4o": { in: 2.5 / 1_000_000, out: 10 / 1_000_000 },
@@ -42,3 +41,4 @@ export function estimateCost(
 }
 
 export const DEFAULT_CHAT_MODEL = "gpt-4o-mini";
+export const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";

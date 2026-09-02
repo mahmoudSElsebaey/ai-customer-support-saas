@@ -18,6 +18,24 @@ router.get(
   aiController.usageSummary
 );
 
+router.get(
+  "/knowledge/search",
+  authorize("OWNER", "ADMIN", "MANAGER", "AGENT"),
+  aiController.searchKnowledge
+);
+
+router.post(
+  "/knowledge/embed",
+  authorize("OWNER", "ADMIN", "MANAGER"),
+  aiController.embedArticles
+);
+
+router.post(
+  "/knowledge/embed/:articleId",
+  authorize("OWNER", "ADMIN", "MANAGER"),
+  aiController.embedArticle
+);
+
 router.post(
   "/tickets/:ticketId/analyze",
   authorize("OWNER", "ADMIN", "MANAGER", "AGENT"),
