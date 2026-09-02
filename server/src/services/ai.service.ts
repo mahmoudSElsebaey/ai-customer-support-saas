@@ -1,0 +1,255 @@
+import { z } from "zod";
+import { prisma } from "../lib/prisma.js";
+import { AppError } from "../utils/AppError.js";
+import {
+  getOpenAI,
+  isAIEnabled,
+  DEFAULT_CHAT_MODEL,
+} from "../lib/openai.js";
+import { aiUsageService } from "./ai-usage.service.js";
+import { logger } from "../lib/logger.js";
+
+const analysisSchema = z.object({
+  intent: z.string(),
+  category: z.string(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
+  sentiment: z.enum(["POSITIVE", "NEUTRAL", "NEGATIVE"]),
+  summary: z.string(),
+});
+
+export type TicketAnalysis = z.infer<typeof analysisSchema>;
+
+function parseJsonFromModel(text: string): unknown {
+  const cleaned = text
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+  return JSON.parse(cleaned);
+}
+
+export class AIService {
+  isAvailable() {
+    return isAIEnabled();
+  }
+
+  /**
+   * Analyze a ticket: intent, category, priority, sentiment, summary.
+   * Never throws in a way that breaks support — caller handles AI_NOT_CONFIGURED.
+   */
+  async analyzeTicket(ticketId: string, organizationId: string) {
+    const ticket = await prisma.ticket.findFirst({
+      where: { id: ticketId, organizationId },
+      include: {
+        customer: { select: { name: true, email: true, company: true } },
+        messages: {
+          orderBy: { createdAt: "asc" },
+          take: 30,
+          select: {
+            content: true,
+            type: true,
+            createdAt: true,
+            sender: { select: { name: true, role: true } },
+          },
+        },
+      },
+    });
+
+    if (!ticket) {
+      throw new AppError("Ticket not found", 404, "TICKET_NOT_FOUND");
+    }
+
+    const openai = getOpenAI();
+    const model = DEFAULT_CHAT_MODEL;
+
+    const conversation = ticket.messages
+      .map((m) => {
+        const who =
+          m.type === "CUSTOMER"
+            ? "Customer"
+            : m.type === "INTERNAL_NOTE"
+              ? "Internal"
+              : m.type === "SYSTEM"
+                ? "System"
+                : "Agent";
+        return `[${who}] ${m.content}`;
+      })
+      .join("\n");
+
+    const systemPrompt = `You are an expert customer support analyst for a SaaS helpdesk.
+Analyze the support ticket and respond with ONLY valid JSON (no markdown) matching this shape:
+{
+  "intent": "short intent label e.g. Refund Request",
+  "category": "short category e.g. Billing",
+  "priority": "LOW" | "MEDIUM" | "HIGH" | "URGENT",
+  "sentiment": "POSITIVE" | "NEUTRAL" | "NEGATIVE",
+  "summary": "2-3 sentence neutral summary of the issue and current state"
+}
+Be concise and accurate. Do not invent facts not present in the ticket.`;
+
+    const userPrompt = `Ticket subject: ${ticket.subject}
+Description: ${ticket.description ?? "(none)"}
+Customer: ${ticket.customer.name} (${ticket.customer.email})${
+      ticket.customer.company ? ` @ ${ticket.customer.company}` : ""
+    }
+Current status: ${ticket.status}
+Current priority: ${ticket.priority}
+Category field: ${ticket.category ?? "(none)"}
+
+Conversation:
+${conversation || "(no messages yet)"}`;
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model,
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      });
+
+      const raw = completion.choices[0]?.message?.content ?? "{}";
+      const usage = completion.usage;
+
+      if (usage) {
+        await aiUsageService.track({
+          organizationId,
+          feature: "analyze_ticket",
+          model,
+          promptTokens: usage.prompt_tokens,
+          completionTokens: usage.completion_tokens,
+        });
+      }
+
+      const parsed = analysisSchema.parse(parseJsonFromModel(raw));
+      return {
+        analysis: parsed,
+        model,
+        usage: usage
+          ? {
+              promptTokens: usage.prompt_tokens,
+              completionTokens: usage.completion_tokens,
+              totalTokens: usage.total_tokens,
+            }
+          : null,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error({ error, ticketId }, "AI analyzeTicket failed");
+      throw new AppError(
+        "AI analysis failed. Support continues without AI.",
+        502,
+        "AI_REQUEST_FAILED"
+      );
+    }
+  }
+
+  /**
+   * Suggest a reply for the agent. Does NOT send to the customer.
+   */
+  async suggestReply(ticketId: string, organizationId: string) {
+    const ticket = await prisma.ticket.findFirst({
+      where: { id: ticketId, organizationId },
+      include: {
+        customer: { select: { name: true } },
+        messages: {
+          orderBy: { createdAt: "asc" },
+          take: 40,
+          select: {
+            content: true,
+            type: true,
+            sender: { select: { name: true, role: true } },
+          },
+        },
+      },
+    });
+
+    if (!ticket) {
+      throw new AppError("Ticket not found", 404, "TICKET_NOT_FOUND");
+    }
+
+    const openai = getOpenAI();
+    const model = DEFAULT_CHAT_MODEL;
+
+    const conversation = ticket.messages
+      .filter((m) => m.type !== "INTERNAL_NOTE")
+      .map((m) => {
+        const who = m.type === "CUSTOMER" ? "Customer" : "Agent";
+        return `${who}: ${m.content}`;
+      })
+      .join("\n");
+
+    const systemPrompt = `You are a helpful customer support agent assistant.
+Write a professional, empathetic reply the human agent can send to the customer.
+Rules:
+- Do not invent policies, refunds, or commitments not supported by the conversation.
+- Keep tone clear and friendly.
+- If information is missing, ask a concise clarifying question.
+- Output ONLY the reply text (no JSON, no quotes wrapper, no "Subject:").`;
+
+    const userPrompt = `Customer name: ${ticket.customer.name}
+Ticket subject: ${ticket.subject}
+
+Conversation so far:
+${conversation || ticket.description || "(empty)"}`;
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model,
+        temperature: 0.5,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      });
+
+      const suggestion =
+        completion.choices[0]?.message?.content?.trim() ?? "";
+      const usage = completion.usage;
+
+      if (usage) {
+        await aiUsageService.track({
+          organizationId,
+          feature: "suggest_reply",
+          model,
+          promptTokens: usage.prompt_tokens,
+          completionTokens: usage.completion_tokens,
+        });
+      }
+
+      return {
+        suggestion,
+        model,
+        usage: usage
+          ? {
+              promptTokens: usage.prompt_tokens,
+              completionTokens: usage.completion_tokens,
+              totalTokens: usage.total_tokens,
+            }
+          : null,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error({ error, ticketId }, "AI suggestReply failed");
+      throw new AppError(
+        "AI suggestion failed. You can still reply manually.",
+        502,
+        "AI_REQUEST_FAILED"
+      );
+    }
+  }
+
+  async summarizeTicket(ticketId: string, organizationId: string) {
+    const result = await this.analyzeTicket(ticketId, organizationId);
+    return {
+      summary: result.analysis.summary,
+      analysis: result.analysis,
+      model: result.model,
+      usage: result.usage,
+    };
+  }
+}
+
+export const aiService = new AIService();
