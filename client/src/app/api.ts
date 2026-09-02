@@ -13,6 +13,7 @@ export const api = createApi({
     "Customer",
     "Message",
     "KnowledgeArticle",
+    "CannedResponse",
     "Analytics",
   ],
   endpoints: () => ({}),

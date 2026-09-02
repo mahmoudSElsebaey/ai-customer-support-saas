@@ -66,6 +66,17 @@ export interface TicketsListResponse {
   };
 }
 
+export interface WorkspaceStats {
+  open: number;
+  pending: number;
+  inProgress: number;
+  urgent: number;
+  unassigned: number;
+  mine: number;
+  resolvedToday: number;
+  active: number;
+}
+
 export interface CreateTicketRequest {
   customerId: string;
   subject: string;
@@ -88,6 +99,13 @@ export interface UpdateTicketRequest {
 
 export const ticketsApi = api.injectEndpoints({
   endpoints: (builder) => ({
+    getWorkspaceStats: builder.query<
+      { success: boolean; data: WorkspaceStats },
+      void
+    >({
+      query: () => "/tickets/stats/workspace",
+      providesTags: ["Ticket"],
+    }),
     getTickets: builder.query<
       { success: boolean; data: TicketsListResponse },
       {
@@ -97,6 +115,7 @@ export const ticketsApi = api.injectEndpoints({
         status?: string;
         priority?: string;
         unassigned?: string;
+        assignedAgentId?: string;
         customerId?: string;
       }
     >({
@@ -154,6 +173,7 @@ export const ticketsApi = api.injectEndpoints({
 });
 
 export const {
+  useGetWorkspaceStatsQuery,
   useGetTicketsQuery,
   useGetTicketQuery,
   useCreateTicketMutation,
