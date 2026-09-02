@@ -1,46 +1,45 @@
 # Voxly — AI Customer Support SaaS
 
-> **Status:** Phase 7 — RAG & AI Assistant ✅
+> **Status:** Phase 8 — Agent Workspace UX ✅
 
-## RAG pipeline
+## Agent workspace (Phase 8)
 
-1. Publish knowledge articles (org-scoped).
-2. Click **Index for AI** on Knowledge page (or `POST /api/ai/knowledge/embed`).
-3. Embeddings stored on `KnowledgeArticle.embedding` (`text-embedding-3-small`).
-4. **Suggest reply** embeds the ticket query, ranks articles by cosine similarity, injects top hits into the LLM prompt.
-5. Agent sees suggestion + source links — **never auto-sent** to the customer.
+- Queue views: **All active / Mine / Unassigned / Urgent / Open** with live counts
+- Auto-refresh ticket list (15s) + workspace stats (20s)
+- **Assign to me** on ticket detail
+- **Quick replies** (canned responses) picker in the composer
+- Dashboard cards: active, mine, unassigned, urgent, resolved today
+- Urgent rows highlighted in the queue
 
-> Note: similarity ranking runs in-app over JSON vectors (no pgvector required to start). For large corpora, migrate to PostgreSQL `pgvector` with the same service interface.
+### Canned responses API
 
-## AI endpoints
+```
+GET    /api/canned-responses
+POST   /api/canned-responses
+PATCH  /api/canned-responses/:id
+DELETE /api/canned-responses/:id
+```
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/ai/status` | AI availability |
-| POST | `/api/ai/tickets/:id/analyze` | Intent / priority / sentiment |
-| POST | `/api/ai/tickets/:id/suggest-reply` | RAG-grounded draft |
-| GET | `/api/ai/knowledge/search?q=` | Semantic KB search |
-| POST | `/api/ai/knowledge/embed` | Batch embed published articles |
-| GET | `/api/ai/usage` | Token & cost summary |
+### Workspace stats
 
-## Setup
+```
+GET /api/tickets/stats/workspace
+```
+
+After pull:
 
 ```bash
-# server/.env
-OPENAI_API_KEY=sk-...
-
-cd server && npm install && npx prisma generate && npx prisma migrate dev && npm run dev
-cd client && npm install && npm run dev
+cd server && npx prisma migrate dev --name canned_responses
 ```
 
 ## Phases
 
 | Phase | Status |
 |-------|--------|
-| 0–6 | ✅ |
-| 7 RAG & AI Assistant | ✅ |
-| 8 Agent Workspace UX | Next |
-| 9–13 | Planned |
+| 0–7 | ✅ |
+| 8 Agent Workspace UX | ✅ |
+| 9 Analytics | Next |
+| 10–13 | Planned |
 
 ## License
 

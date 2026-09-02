@@ -35,6 +35,24 @@
     "role": "Role",
     "organization": "Organization"
   },
+  "workspace": {
+    "title": "Ticket queue",
+    "all": "All active",
+    "mine": "Mine",
+    "unassigned": "Unassigned",
+    "urgent": "Urgent",
+    "open": "Open",
+    "active": "Active",
+    "resolvedToday": "Resolved today",
+    "liveRefresh": "auto-refresh",
+    "openQueue": "Open queue",
+    "recentTickets": "Recent tickets",
+    "viewAll": "View all",
+    "assignToMe": "Assign to me",
+    "you": "you",
+    "canned": "Quick replies",
+    "noCanned": "No canned responses yet"
+  },
   "tickets": {
     "title": "Tickets",
     "createTicket": "Create ticket",

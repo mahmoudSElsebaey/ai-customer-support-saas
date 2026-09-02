@@ -35,6 +35,24 @@
     "role": "الدور",
     "organization": "المنظمة"
   },
+  "workspace": {
+    "title": "قائمة انتظار التذاكر",
+    "all": "النشطة",
+    "mine": "تذاكري",
+    "unassigned": "غير مسندة",
+    "urgent": "عاجلة",
+    "open": "مفتوحة",
+    "active": "نشطة",
+    "resolvedToday": "حُلّت اليوم",
+    "liveRefresh": "تحديث تلقائي",
+    "openQueue": "فتح القائمة",
+    "recentTickets": "أحدث التذاكر",
+    "viewAll": "عرض الكل",
+    "assignToMe": "إسناد لي",
+    "you": "أنت",
+    "canned": "ردود سريعة",
+    "noCanned": "لا توجد ردود جاهزة بعد"
+  },
   "tickets": {
     "title": "التذاكر",
     "createTicket": "إنشاء تذكرة",

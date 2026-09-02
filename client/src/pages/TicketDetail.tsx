@@ -10,6 +10,7 @@ import {
   type TicketMessage,
 } from "@/features/tickets/ticketsApi";
 import { useMeQuery } from "@/features/auth/authApi";
+import { useGetCannedResponsesQuery } from "@/features/canned/cannedApi";
 import { useSocket } from "@/hooks/useSocket";
 import { StatusBadge } from "@/components/StatusBadge";
 import { AiAssistantPanel } from "@/components/AiAssistantPanel";
@@ -20,7 +21,8 @@ export default function TicketDetail() {
   const { t } = useTranslation();
   const { data, isLoading, isError, refetch } = useGetTicketQuery(id!);
   const { data: meData } = useMeQuery();
-  const [updateTicket] = useUpdateTicketMutation();
+  const { data: cannedData } = useGetCannedResponsesQuery();
+  const [updateTicket, { isLoading: isUpdating }] = useUpdateTicketMutation();
   const [addMessage, { isLoading: isSending }] = useAddMessageMutation();
 
   const {
@@ -34,6 +36,7 @@ export default function TicketDetail() {
 
   const [content, setContent] = useState("");
   const [isInternal, setIsInternal] = useState(false);
+  const [showCanned, setShowCanned] = useState(false);
   const [liveMessages, setLiveMessages] = useState<TicketMessage[] | null>(null);
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,19 +44,16 @@ export default function TicketDetail() {
 
   const ticket = data?.data;
   const currentUserId = meData?.data?.id;
+  const canned = cannedData?.data ?? [];
 
   useEffect(() => {
-    if (ticket?.messages) {
-      setLiveMessages(ticket.messages);
-    }
+    if (ticket?.messages) setLiveMessages(ticket.messages);
   }, [ticket?.messages]);
 
   useEffect(() => {
     if (!id || !connected) return;
     joinTicket(id);
-    return () => {
-      leaveTicket(id);
-    };
+    return () => leaveTicket(id);
   }, [id, connected, joinTicket, leaveTicket]);
 
   useEffect(() => {
@@ -121,9 +121,7 @@ export default function TicketDetail() {
     if (!id) return;
     emitTypingStart(id);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
-      emitTypingStop(id);
-    }, 1500);
+    typingTimeoutRef.current = setTimeout(() => emitTypingStop(id), 1500);
   }, [id, emitTypingStart, emitTypingStop]);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -141,7 +139,7 @@ export default function TicketDetail() {
       setContent("");
       setIsInternal(false);
     } catch {
-      // RTK error
+      /* RTK */
     }
   };
 
@@ -153,6 +151,16 @@ export default function TicketDetail() {
   const handlePriorityChange = async (priority: TicketPriority) => {
     if (!id) return;
     await updateTicket({ id, body: { priority } });
+  };
+
+  const handleAssignToMe = async () => {
+    if (!id || !currentUserId) return;
+    await updateTicket({ id, body: { assignedAgentId: currentUserId } });
+  };
+
+  const insertCanned = (text: string) => {
+    setContent((prev) => (prev ? `${prev}\n\n${text}` : text));
+    setShowCanned(false);
   };
 
   if (isLoading) {
@@ -176,6 +184,7 @@ export default function TicketDetail() {
 
   const messages = liveMessages ?? ticket.messages ?? [];
   const typingNames = Object.values(typingUsers);
+  const isMine = ticket.assignedAgent?.id === currentUserId;
 
   return (
     <div className="space-y-6">
@@ -211,6 +220,16 @@ export default function TicketDetail() {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          {!isMine && (
+            <button
+              type="button"
+              onClick={handleAssignToMe}
+              disabled={isUpdating}
+              className="rounded-lg bg-primary-600 text-white px-2.5 py-1.5 text-xs font-medium hover:bg-primary-700 disabled:opacity-50"
+            >
+              {t("workspace.assignToMe")}
+            </button>
+          )}
           <select
             value={ticket.status}
             onChange={(e) => handleStatusChange(e.target.value as TicketStatus)}
@@ -301,8 +320,37 @@ export default function TicketDetail() {
 
           <form
             onSubmit={handleSend}
-            className="bg-white rounded-xl border border-slate-200 p-4 space-y-3"
+            className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 relative"
           >
+            {showCanned && (
+              <div className="absolute bottom-full mb-2 start-0 end-0 z-10 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                {canned.length === 0 ? (
+                  <p className="p-3 text-xs text-slate-400">
+                    {t("workspace.noCanned")}
+                  </p>
+                ) : (
+                  canned.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => insertCanned(c.content)}
+                      className="w-full text-start px-3 py-2 text-sm hover:bg-slate-50 border-b border-slate-50 last:border-0"
+                    >
+                      <span className="font-medium text-slate-800">{c.title}</span>
+                      {c.shortcut && (
+                        <span className="ms-2 text-[11px] text-slate-400">
+                          /{c.shortcut}
+                        </span>
+                      )}
+                      <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
+                        {c.content}
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
             <textarea
               value={content}
               onChange={(e) => {
@@ -313,16 +361,25 @@ export default function TicketDetail() {
               placeholder={t("tickets.replyPlaceholder")}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-none"
             />
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isInternal}
-                  onChange={(e) => setIsInternal(e.target.checked)}
-                  className="rounded border-slate-300"
-                />
-                {t("tickets.internalNote")}
-              </label>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isInternal}
+                    onChange={(e) => setIsInternal(e.target.checked)}
+                    className="rounded border-slate-300"
+                  />
+                  {t("tickets.internalNote")}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowCanned((v) => !v)}
+                  className="text-xs text-primary-600 hover:underline"
+                >
+                  {t("workspace.canned")}
+                </button>
+              </div>
               <button
                 type="submit"
                 disabled={isSending || !content.trim()}
@@ -360,6 +417,11 @@ export default function TicketDetail() {
             </h3>
             <p className="text-sm text-slate-700">
               {ticket.assignedAgent?.name ?? t("tickets.unassigned")}
+              {isMine && (
+                <span className="ms-2 text-[11px] text-primary-600">
+                  ({t("workspace.you")})
+                </span>
+              )}
             </p>
           </div>
 
