@@ -14,6 +14,12 @@ const router = Router();
 router.use(protect, requireTenant);
 
 router.get(
+  "/stats/workspace",
+  authorize("OWNER", "ADMIN", "MANAGER", "AGENT"),
+  ticketController.workspaceStats
+);
+
+router.get(
   "/",
   authorize("OWNER", "ADMIN", "MANAGER", "AGENT"),
   validate(listTicketsSchema),

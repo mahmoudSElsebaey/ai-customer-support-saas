@@ -5,6 +5,7 @@ import customerRoutes from "./customer.routes.js";
 import ticketRoutes from "./ticket.routes.js";
 import knowledgeRoutes from "./knowledge.routes.js";
 import aiRoutes from "./ai.routes.js";
+import cannedRoutes from "./canned.routes.js";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use("/customers", customerRoutes);
 router.use("/tickets", ticketRoutes);
 router.use("/knowledge", knowledgeRoutes);
 router.use("/ai", aiRoutes);
+router.use("/canned-responses", cannedRoutes);
 
 export default router;

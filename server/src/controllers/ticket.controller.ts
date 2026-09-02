@@ -1,7 +1,16 @@
 import type { Request, Response } from "express";
 import { ticketService } from "../services/ticket.service.js";
+import { ticketStatsService } from "../services/ticket-stats.service.js";
 import { successResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+
+export const workspaceStats = asyncHandler(async (req: Request, res: Response) => {
+  const stats = await ticketStatsService.workspaceStats(
+    req.user!.organizationId,
+    req.user!.id
+  );
+  return successResponse(res, stats);
+});
 
 export const listTickets = asyncHandler(async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
