@@ -158,5 +158,15 @@
     "canceled": "Checkout canceled.",
     "error": "Billing request failed.",
     "notConfigured": "Stripe is not configured. Set STRIPE_SECRET_KEY and price IDs on the server."
+  },
+  "portal": {
+    "helpCenter": "Help center",
+    "myTickets": "My tickets",
+    "newTicket": "New ticket",
+    "submitTicket": "Submit ticket",
+    "help": "Help articles",
+    "loginTitle": "Sign in to track your support requests",
+    "registerTitle": "Create an account to contact support",
+    "noTickets": "You have no tickets yet"
   }
 }

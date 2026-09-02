@@ -16,6 +16,14 @@ import KnowledgeForm from "./pages/KnowledgeForm";
 import Analytics from "./pages/Analytics";
 import Billing from "./pages/Billing";
 import DashboardLayout from "./layouts/DashboardLayout";
+import PortalLayout from "./layouts/PortalLayout";
+import PortalLogin from "./pages/portal/PortalLogin";
+import PortalRegister from "./pages/portal/PortalRegister";
+import PortalTickets from "./pages/portal/PortalTickets";
+import PortalTicketDetail from "./pages/portal/PortalTicketDetail";
+import PortalNewTicket from "./pages/portal/PortalNewTicket";
+import PortalKnowledge from "./pages/portal/PortalKnowledge";
+import PortalArticle from "./pages/portal/PortalArticle";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 function Landing() {
@@ -101,6 +109,18 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
+      {/* Customer portal */}
+      <Route path="/portal/:slug/login" element={<PortalLogin />} />
+      <Route path="/portal/:slug/register" element={<PortalRegister />} />
+      <Route path="/portal/:slug" element={<PortalLayout />}>
+        <Route index element={<PortalTickets />} />
+        <Route path="new" element={<PortalNewTicket />} />
+        <Route path="tickets/:id" element={<PortalTicketDetail />} />
+        <Route path="knowledge" element={<PortalKnowledge />} />
+        <Route path="knowledge/:id" element={<PortalArticle />} />
+      </Route>
+
+      {/* Agent / staff dashboard */}
       <Route
         element={
           <ProtectedRoute>

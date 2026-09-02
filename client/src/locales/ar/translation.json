@@ -158,5 +158,15 @@
     "canceled": "تم إلغاء عملية الدفع.",
     "error": "فشل طلب الفوترة.",
     "notConfigured": "Stripe غير مُعد. عيّن STRIPE_SECRET_KEY ومعرّفات الأسعار على الخادم."
+  },
+  "portal": {
+    "helpCenter": "مركز المساعدة",
+    "myTickets": "تذاكري",
+    "newTicket": "تذكرة جديدة",
+    "submitTicket": "إرسال التذكرة",
+    "help": "مقالات المساعدة",
+    "loginTitle": "سجّل الدخول لمتابعة طلبات الدعم",
+    "registerTitle": "أنشئ حسابًا للتواصل مع الدعم",
+    "noTickets": "لا توجد تذاكر بعد"
   }
 }
