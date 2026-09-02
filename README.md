@@ -1,54 +1,42 @@
 # Voxly — AI Customer Support SaaS
 
-Modern production-ready AI Customer Support platform with multi-tenancy, real-time messaging, knowledge base + RAG, and a professional agent workspace.
+> **Status:** Phase 6 — AI Foundation ✅
 
-> **Status:** Phase 5 — Knowledge Base ✅
+Multi-tenant AI customer support platform: tickets, realtime chat, knowledge base, and OpenAI-assisted agent workflows.
 
-## Features so far
+## AI (Phase 6)
 
-- Multi-tenant organizations + RBAC
-- Auth (JWT access/refresh, HTTP-only cookies)
-- Customers & Tickets with messages + internal notes
-- Real-time Socket.IO (messages, typing, presence)
-- **Knowledge base** (articles, categories, tags, search, publish workflow)
-- Embedding fields prepared for RAG (Phase 6–7)
+Requires `OPENAI_API_KEY` in `server/.env`.
 
-## Knowledge API
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/ai/status` | Whether AI is configured |
+| `POST /api/ai/tickets/:ticketId/analyze` | Intent, category, priority, sentiment, summary |
+| `POST /api/ai/tickets/:ticketId/suggest-reply` | Draft reply for agent (not auto-sent) |
+| `POST /api/ai/tickets/:ticketId/summarize` | Short summary |
+| `GET /api/ai/usage` | Token/cost usage per org |
 
-```
-GET    /api/knowledge
-GET    /api/knowledge/categories
-GET    /api/knowledge/:id
-POST   /api/knowledge
-PATCH  /api/knowledge/:id
-DELETE /api/knowledge/:id
-```
+- Failures return `502 AI_REQUEST_FAILED` — support still works without AI.
+- Usage is stored in `AIUsage` (tokens + estimated cost).
+- Model default: `gpt-4o-mini`.
 
-All scoped by `organizationId` from the authenticated JWT.
-
-## Getting Started
+## Setup
 
 ```bash
 cd server && cp ../.env.example .env
+# Set DATABASE_URL, JWT secrets, OPENAI_API_KEY
 npm install && npx prisma generate && npx prisma migrate dev && npm run dev
 
 cd client && npm install && npm run dev
-```
-
-After schema changes run:
-
-```bash
-cd server && npx prisma migrate dev --name knowledge_embeddings_prep
 ```
 
 ## Phases
 
 | Phase | Status |
 |-------|--------|
-| 0–4 | ✅ |
-| 5 Knowledge Base | ✅ |
-| 6 AI Foundation | Next |
-| 7 RAG & AI Assistant | |
+| 0–5 | ✅ |
+| 6 AI Foundation | ✅ |
+| 7 RAG & AI Assistant | Next |
 | 8–13 | Planned |
 
 ## License

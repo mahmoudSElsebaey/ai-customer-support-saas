@@ -12,6 +12,7 @@ import {
 import { useMeQuery } from "@/features/auth/authApi";
 import { useSocket } from "@/hooks/useSocket";
 import { StatusBadge } from "@/components/StatusBadge";
+import { AiAssistantPanel } from "@/components/AiAssistantPanel";
 import { cn } from "@/lib/utils";
 
 export default function TicketDetail() {
@@ -34,23 +35,19 @@ export default function TicketDetail() {
   const [content, setContent] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [liveMessages, setLiveMessages] = useState<TicketMessage[] | null>(null);
-  const [typingUsers, setTypingUsers] = useState<
-    Record<string, string>
-  >({});
+  const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const ticket = data?.data;
   const currentUserId = meData?.data?.id;
 
-  // Sync live messages from query
   useEffect(() => {
     if (ticket?.messages) {
       setLiveMessages(ticket.messages);
     }
   }, [ticket?.messages]);
 
-  // Join / leave ticket room
   useEffect(() => {
     if (!id || !connected) return;
     joinTicket(id);
@@ -59,7 +56,6 @@ export default function TicketDetail() {
     };
   }, [id, connected, joinTicket, leaveTicket]);
 
-  // Realtime listeners
   useEffect(() => {
     if (!id) return;
 
@@ -73,7 +69,6 @@ export default function TicketDetail() {
         if (list.some((m) => m.id === payload.message.id)) return list;
         return [...list, payload.message];
       });
-      // Clear typing for sender
       if (payload.message.sender?.id) {
         setTypingUsers((prev) => {
           const next = { ...prev };
@@ -84,9 +79,7 @@ export default function TicketDetail() {
     };
 
     const onTicketUpdated = (payload: { ticket: { id: string } }) => {
-      if (payload.ticket.id === id) {
-        refetch();
-      }
+      if (payload.ticket.id === id) refetch();
     };
 
     const onTypingStart = (payload: {
@@ -120,7 +113,6 @@ export default function TicketDetail() {
     };
   }, [id, socket, currentUserId, refetch]);
 
-  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [liveMessages, typingUsers]);
@@ -370,6 +362,13 @@ export default function TicketDetail() {
               {ticket.assignedAgent?.name ?? t("tickets.unassigned")}
             </p>
           </div>
+
+          {id && (
+            <AiAssistantPanel
+              ticketId={id}
+              onInsertSuggestion={(text) => setContent(text)}
+            />
+          )}
 
           <div className="bg-white rounded-xl border border-slate-200 p-4 text-xs text-slate-500 space-y-1">
             <p>

@@ -89,5 +89,18 @@
     "publish": "Publish",
     "unpublish": "Unpublish",
     "confirmDelete": "Delete this article?"
+  },
+  "ai": {
+    "title": "AI Assistant",
+    "notConfigured": "AI is not configured. Set OPENAI_API_KEY on the server.",
+    "analyze": "Analyze ticket",
+    "suggestReply": "Suggest reply",
+    "suggestion": "Suggested reply",
+    "insert": "Insert into composer",
+    "regenerate": "Regenerate",
+    "dismiss": "Dismiss",
+    "intent": "Intent",
+    "category": "Category",
+    "error": "AI request failed. You can continue without AI."
   }
 }
