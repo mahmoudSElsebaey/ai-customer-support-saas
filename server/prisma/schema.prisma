@@ -1,0 +1,212 @@
+// Voxly — AI Customer Support SaaS
+// Phase 1–2: Core models + Auth & Multi-tenancy
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MANAGER
+  AGENT
+  CUSTOMER
+}
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+enum TicketStatus {
+  OPEN
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MessageType {
+  CUSTOMER
+  AGENT
+  INTERNAL_NOTE
+  AI_SUGGESTION
+  SYSTEM
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users             User[]
+  customers         Customer[]
+  tickets           Ticket[]
+  knowledgeArticles KnowledgeArticle[]
+  aiUsages         AIUsage[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String
+  email          String
+  password       String
+  role           Role      @default(AGENT)
+  avatar         String?
+  organizationId String
+  isActive       Boolean   @default(true)
+  lastSeenAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedTickets Ticket[]      @relation("AssignedAgent")
+  messages        Message[]
+  refreshTokens   RefreshToken[]
+
+  @@unique([email, organizationId])
+  @@index([organizationId])
+  @@index([email])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model Customer {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  email          String
+  phone          String?
+  company        String?
+  status         String   @default("active")
+  tags           String[] @default([])
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tickets      Ticket[]
+
+  @@unique([email, organizationId])
+  @@index([organizationId])
+  @@map("customers")
+}
+
+model Ticket {
+  id              String         @id @default(cuid())
+  organizationId  String
+  customerId      String
+  assignedAgentId String?
+  subject         String
+  description     String?
+  status          TicketStatus   @default(OPEN)
+  priority        TicketPriority @default(MEDIUM)
+  category        String?
+  tags            String[]       @default([])
+  resolvedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  assignedAgent User?        @relation("AssignedAgent", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  messages      Message[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, assignedAgentId])
+  @@index([customerId])
+  @@map("tickets")
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  ticketId  String
+  senderId  String?
+  content   String
+  type      MessageType
+  readAt    DateTime?
+  createdAt DateTime    @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender User?  @relation(fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
+  @@index([ticketId, createdAt])
+  @@map("messages")
+}
+
+model KnowledgeArticle {
+  id             String        @id @default(cuid())
+  organizationId String
+  title          String
+  content        String
+  category       String?
+  tags           String[]      @default([])
+  status         ArticleStatus @default(DRAFT)
+  authorId       String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@map("knowledge_articles")
+}
+
+model AIUsage {
+  id               String   @id @default(cuid())
+  organizationId   String
+  feature          String
+  model            String?
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  estimatedCost    Float    @default(0)
+  createdAt        DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([organizationId, createdAt])
+  @@map("ai_usages")
+}

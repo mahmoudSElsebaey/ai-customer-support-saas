@@ -1,0 +1,71 @@
+{
+  "common": {
+    "welcome": "Welcome to Voxly",
+    "tagline": "AI-powered customer support that feels human",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "back": "Back"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "tickets": "Tickets",
+    "customers": "Customers"
+  },
+  "auth": {
+    "login": "Log in",
+    "register": "Sign up",
+    "logout": "Log out",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "name": "Full name",
+    "organizationName": "Organization name",
+    "createOrg": "Create your organization and start supporting customers",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "subtitle": "Your support workspace is ready.",
+    "role": "Role",
+    "organization": "Organization"
+  },
+  "tickets": {
+    "title": "Tickets",
+    "createTicket": "Create ticket",
+    "status": "Status",
+    "priority": "Priority",
+    "subject": "Subject",
+    "description": "Description",
+    "customer": "Customer",
+    "agent": "Agent",
+    "unassigned": "Unassigned",
+    "updated": "Updated",
+    "created": "Created",
+    "total": "total",
+    "empty": "No tickets yet",
+    "notFound": "Ticket not found",
+    "noMessages": "No messages yet",
+    "replyPlaceholder": "Type your reply...",
+    "send": "Send",
+    "internalNote": "Internal note",
+    "allStatuses": "All statuses",
+    "allPriorities": "All priorities",
+    "selectCustomer": "Select a customer",
+    "typing": "is typing..."
+  },
+  "customers": {
+    "title": "Customers",
+    "create": "Add customer",
+    "total": "total",
+    "empty": "No customers yet",
+    "company": "Company",
+    "phone": "Phone",
+    "notes": "Notes",
+    "viewProfile": "View profile"
+  }
+}

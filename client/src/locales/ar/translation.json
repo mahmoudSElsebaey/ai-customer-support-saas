@@ -1,0 +1,71 @@
+{
+  "common": {
+    "welcome": "مرحباً بك في Voxly",
+    "tagline": "دعم عملاء مدعوم بالذكاء الاصطناعي يبدو بشرياً",
+    "loading": "جاري التحميل...",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "search": "بحث",
+    "back": "رجوع"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "tickets": "التذاكر",
+    "customers": "العملاء"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "logout": "تسجيل الخروج",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "name": "الاسم الكامل",
+    "organizationName": "اسم المنظمة",
+    "createOrg": "أنشئ منظمتك وابدأ بدعم عملائك",
+    "noAccount": "ليس لديك حساب؟",
+    "hasAccount": "لديك حساب بالفعل؟"
+  },
+  "dashboard": {
+    "welcome": "مرحباً",
+    "subtitle": "مساحة عمل الدعم جاهزة.",
+    "role": "الدور",
+    "organization": "المنظمة"
+  },
+  "tickets": {
+    "title": "التذاكر",
+    "createTicket": "إنشاء تذكرة",
+    "status": "الحالة",
+    "priority": "الأولوية",
+    "subject": "الموضوع",
+    "description": "الوصف",
+    "customer": "العميل",
+    "agent": "الوكيل",
+    "unassigned": "غير مسند",
+    "updated": "آخر تحديث",
+    "created": "تاريخ الإنشاء",
+    "total": "إجمالي",
+    "empty": "لا توجد تذاكر بعد",
+    "notFound": "التذكرة غير موجودة",
+    "noMessages": "لا توجد رسائل بعد",
+    "replyPlaceholder": "اكتب ردك...",
+    "send": "إرسال",
+    "internalNote": "ملاحظة داخلية",
+    "allStatuses": "كل الحالات",
+    "allPriorities": "كل الأولويات",
+    "selectCustomer": "اختر عميلاً",
+    "typing": "يكتب..."
+  },
+  "customers": {
+    "title": "العملاء",
+    "create": "إضافة عميل",
+    "total": "إجمالي",
+    "empty": "لا يوجد عملاء بعد",
+    "company": "الشركة",
+    "phone": "الهاتف",
+    "notes": "ملاحظات",
+    "viewProfile": "عرض الملف"
+  }
+}
