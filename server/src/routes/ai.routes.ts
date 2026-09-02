@@ -1,10 +1,11 @@
 import { Router } from "express";
 import * as aiController from "../controllers/ai.controller.js";
 import { protect, authorize, requireTenant } from "../middleware/auth.middleware.js";
+import { aiLimiter } from "../middleware/rateLimit.js";
 
 const router = Router();
 
-router.use(protect, requireTenant);
+router.use(protect, requireTenant, aiLimiter);
 
 router.get(
   "/status",

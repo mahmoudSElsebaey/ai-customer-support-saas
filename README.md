@@ -1,32 +1,56 @@
 # Voxly — AI Customer Support SaaS
 
-> **Status:** Phase 9 — Analytics & Reporting ✅
+> **Status:** Phase 10 — Production Hardening ✅
 
-## Analytics
+## Production hardening (Phase 10)
 
+| Area | Implementation |
+|------|----------------|
+| Rate limiting | Global + stricter auth + AI limits (`express-rate-limit`) |
+| Security headers | `helmet` (CSP in production) |
+| Body size | JSON limited to 1mb |
+| Compression | `compression` |
+| Request ID | `X-Request-Id` on every response |
+| Structured logs | `pino` + `pino-http` |
+| Trust proxy | Enabled in production |
+| Health | `GET /api/health` (liveness), `GET /api/health/ready` (DB) |
+| Graceful shutdown | SIGTERM/SIGINT, 15s force timeout |
+| Errors | No stack traces in production; `requestId` in payloads |
+| Docker | `Dockerfile` + `docker-compose.yml` (API + Postgres) |
+
+### Health checks
+
+```bash
+curl http://localhost:5000/api/health
+curl http://localhost:5000/api/health/ready
 ```
-GET /api/analytics/overview?days=30
+
+### Docker
+
+```bash
+# Set JWT secrets + optional OPENAI_API_KEY in environment
+docker compose up --build
 ```
 
-Returns (org-scoped):
+### Local production-ish run
 
-- Totals: active, created/resolved in period, customers, published articles
-- By status & priority
-- Daily volume series
-- Avg first response time & avg resolution time
-- Agent workload
-- AI usage (requests, tokens, estimated cost by feature)
-
-UI: **Analytics** in the main nav — period toggles 7 / 14 / 30 days.
+```bash
+cd server
+npm install
+npx prisma generate
+npx prisma migrate deploy
+npm run build && npm start
+```
 
 ## Phases
 
 | Phase | Status |
 |-------|--------|
-| 0–8 | ✅ |
-| 9 Analytics | ✅ |
-| 10 Production hardening | Next |
-| 11–13 | Planned |
+| 0–9 | ✅ |
+| 10 Production Hardening | ✅ |
+| 11 Billing (Stripe) | Next |
+| 12 Customer portal | Planned |
+| 13 Observability / polish | Planned |
 
 ## License
 

@@ -6,16 +6,18 @@ import { env } from "../config/env.js";
 
 export function errorHandler(
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): void {
-  // Zod validation errors
+  const requestId = req.requestId;
+
   if (err instanceof ZodError) {
     res.status(400).json({
       success: false,
       message: "Validation failed",
       code: "VALIDATION_ERROR",
+      requestId,
       errors: err.errors.map((e) => ({
         path: e.path.join("."),
         message: e.message,
@@ -24,22 +26,21 @@ export function errorHandler(
     return;
   }
 
-  // Operational AppError
   if (err instanceof AppError) {
     if (!err.isOperational) {
-      logger.error({ err }, "Non-operational error");
+      logger.error({ err, requestId }, "Non-operational error");
     }
 
     res.status(err.statusCode).json({
       success: false,
       message: err.message,
       code: err.code,
+      requestId,
     });
     return;
   }
 
-  // Unexpected errors
-  logger.error({ err }, "Unhandled error");
+  logger.error({ err, requestId }, "Unhandled error");
 
   res.status(500).json({
     success: false,
@@ -48,5 +49,6 @@ export function errorHandler(
         ? "Internal server error"
         : err.message || "Internal server error",
     code: "INTERNAL_ERROR",
+    requestId,
   });
 }
