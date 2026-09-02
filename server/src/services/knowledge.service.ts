@@ -1,14 +1,47 @@
-import { prisma } from "../lib/prisma.js";
+import mongoose from "mongoose";
+import { KnowledgeArticle } from "../models/KnowledgeArticle.js";
 import { AppError } from "../utils/AppError.js";
+import { toId, serializeDoc } from "../utils/serialize.js";
 import type {
   CreateArticleInput,
   UpdateArticleInput,
 } from "../validations/knowledge.validation.js";
+import { ArticleStatus } from "../types/enums.js";
 
 function buildExcerpt(content: string, provided?: string | null): string {
   if (provided && provided.trim()) return provided.trim().slice(0, 500);
   const plain = content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   return plain.slice(0, 200) + (plain.length > 200 ? "…" : "");
+}
+
+function requireObjectId(id: string, code = "ARTICLE_NOT_FOUND") {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new AppError("Article not found", 404, code);
+  }
+  return new mongoose.Types.ObjectId(id);
+}
+
+function mapArticle(doc: Record<string, unknown>) {
+  const base = serializeDoc(doc) as Record<string, unknown>;
+  if (!base) return null;
+  base.organizationId = toId(doc.organizationId as mongoose.Types.ObjectId);
+  if (doc.authorId && typeof doc.authorId === "object") {
+    const author = doc.authorId as {
+      _id?: mongoose.Types.ObjectId;
+      name?: string;
+      email?: string;
+    };
+    base.authorId = toId(author._id);
+    base.author = {
+      id: toId(author._id),
+      name: author.name ?? null,
+      ...(author.email !== undefined ? { email: author.email } : {}),
+    };
+  } else {
+    base.authorId = toId(doc.authorId as mongoose.Types.ObjectId);
+  }
+  delete base.embedding;
+  return base;
 }
 
 interface ListParams {
@@ -19,7 +52,6 @@ interface ListParams {
   status?: string;
   category?: string;
   tag?: string;
-  /** Agents/customers typically only see PUBLISHED */
   publishedOnly?: boolean;
 }
 
@@ -36,83 +68,73 @@ export class KnowledgeService {
       publishedOnly,
     } = params;
 
-    const where: Record<string, unknown> = { organizationId };
+    const orgId = requireObjectId(organizationId);
+    const filter: Record<string, unknown> = { organizationId: orgId };
 
     if (publishedOnly) {
-      where.status = "PUBLISHED";
+      filter.status = ArticleStatus.PUBLISHED;
     } else if (status) {
-      where.status = status;
+      filter.status = status;
     }
 
-    if (category) where.category = category;
-    if (tag) where.tags = { has: tag };
+    if (category) filter.category = category;
+    if (tag) filter.tags = tag;
 
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { content: { contains: search, mode: "insensitive" } },
-        { excerpt: { contains: search, mode: "insensitive" } },
-        { category: { contains: search, mode: "insensitive" } },
+      const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      filter.$or = [
+        { title: re },
+        { content: re },
+        { excerpt: re },
+        { category: re },
       ];
     }
 
     const [items, total] = await Promise.all([
-      prisma.knowledgeArticle.findMany({
-        where,
-        orderBy: [{ updatedAt: "desc" }],
-        skip: (page - 1) * limit,
-        take: limit,
-        select: {
-          id: true,
-          title: true,
-          excerpt: true,
-          category: true,
-          tags: true,
-          status: true,
-          authorId: true,
-          publishedAt: true,
-          createdAt: true,
-          updatedAt: true,
-          author: {
-            select: { id: true, name: true },
-          },
-        },
-      }),
-      prisma.knowledgeArticle.count({ where }),
+      KnowledgeArticle.find(filter)
+        .sort({ updatedAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .select(
+          "title excerpt category tags status authorId publishedAt createdAt updatedAt"
+        )
+        .populate("authorId", "name")
+        .lean()
+        .exec(),
+      KnowledgeArticle.countDocuments(filter),
     ]);
 
     return {
-      items,
+      items: items.map((a) => mapArticle(a as Record<string, unknown>)),
       pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limit) || 1,
       },
     };
   }
 
   async getById(id: string, organizationId: string, publishedOnly = false) {
-    const article = await prisma.knowledgeArticle.findFirst({
-      where: {
-        id,
-        organizationId,
-        ...(publishedOnly ? { status: "PUBLISHED" } : {}),
-      },
-      include: {
-        author: {
-          select: { id: true, name: true, email: true },
-        },
-      },
-    });
+    const articleId = requireObjectId(id);
+    const orgId = requireObjectId(organizationId);
+
+    const filter: Record<string, unknown> = {
+      _id: articleId,
+      organizationId: orgId,
+    };
+    if (publishedOnly) filter.status = ArticleStatus.PUBLISHED;
+
+    const article = await KnowledgeArticle.findOne(filter)
+      .populate("authorId", "name email")
+      .lean()
+      .exec();
 
     if (!article) {
       throw new AppError("Article not found", 404, "ARTICLE_NOT_FOUND");
     }
 
-    // Don't expose embedding vector in normal responses
-    const { embedding: _e, ...rest } = article;
-    return rest;
+    return mapArticle(article as Record<string, unknown>);
   }
 
   async create(
@@ -120,35 +142,38 @@ export class KnowledgeService {
     authorId: string,
     input: CreateArticleInput
   ) {
-    const status = input.status ?? "DRAFT";
+    const orgId = requireObjectId(organizationId);
+    const authorObjectId = requireObjectId(authorId);
+    const status = input.status ?? ArticleStatus.DRAFT;
     const excerpt = buildExcerpt(input.content, input.excerpt);
 
-    return prisma.knowledgeArticle.create({
-      data: {
-        organizationId,
-        authorId,
-        title: input.title,
-        content: input.content,
-        excerpt,
-        category: input.category ?? null,
-        tags: input.tags ?? [],
-        status,
-        publishedAt: status === "PUBLISHED" ? new Date() : null,
-        // embedding left null until Phase 6/7
-      },
-      include: {
-        author: { select: { id: true, name: true } },
-      },
+    const created = await KnowledgeArticle.create({
+      organizationId: orgId,
+      authorId: authorObjectId,
+      title: input.title,
+      content: input.content,
+      excerpt,
+      category: input.category ?? null,
+      tags: input.tags ?? [],
+      status,
+      publishedAt: status === ArticleStatus.PUBLISHED ? new Date() : null,
     });
+
+    const populated = await KnowledgeArticle.findById(created._id)
+      .populate("authorId", "name")
+      .lean()
+      .exec();
+
+    return mapArticle(populated as Record<string, unknown>);
   }
 
-  async update(
-    id: string,
-    organizationId: string,
-    input: UpdateArticleInput
-  ) {
-    const existing = await prisma.knowledgeArticle.findFirst({
-      where: { id, organizationId },
+  async update(id: string, organizationId: string, input: UpdateArticleInput) {
+    const articleId = requireObjectId(id);
+    const orgId = requireObjectId(organizationId);
+
+    const existing = await KnowledgeArticle.findOne({
+      _id: articleId,
+      organizationId: orgId,
     });
 
     if (!existing) {
@@ -161,86 +186,86 @@ export class KnowledgeService {
         ? buildExcerpt(content, input.excerpt ?? existing.excerpt)
         : existing.excerpt;
 
-    let publishedAt = existing.publishedAt;
-    if (input.status === "PUBLISHED" && existing.status !== "PUBLISHED") {
-      publishedAt = new Date();
-    }
-    if (input.status && input.status !== "PUBLISHED") {
-      // keep publishedAt history or clear — keep it for analytics
+    if (input.title !== undefined) existing.title = input.title;
+    if (input.content !== undefined) existing.content = input.content;
+    existing.excerpt = excerpt;
+    if (input.category !== undefined) existing.category = input.category;
+    if (input.tags !== undefined) existing.tags = input.tags;
+
+    if (input.status !== undefined) {
+      if (
+        input.status === ArticleStatus.PUBLISHED &&
+        existing.status !== ArticleStatus.PUBLISHED
+      ) {
+        existing.publishedAt = new Date();
+      }
+      existing.status = input.status;
     }
 
-    // Content change invalidates embedding (Phase 6 will regenerate)
     const contentChanged =
       input.content !== undefined && input.content !== existing.content;
+    if (contentChanged) {
+      existing.embedding = null;
+      existing.embeddingUpdatedAt = null;
+    }
 
-    return prisma.knowledgeArticle.update({
-      where: { id },
-      data: {
-        ...(input.title !== undefined && { title: input.title }),
-        ...(input.content !== undefined && { content: input.content }),
-        excerpt,
-        ...(input.category !== undefined && { category: input.category }),
-        ...(input.tags !== undefined && { tags: input.tags }),
-        ...(input.status !== undefined && { status: input.status }),
-        publishedAt,
-        ...(contentChanged && {
-          embedding: null,
-          embeddingUpdatedAt: null,
-        }),
-      },
-      include: {
-        author: { select: { id: true, name: true } },
-      },
-    });
+    await existing.save();
+
+    const populated = await KnowledgeArticle.findById(existing._id)
+      .populate("authorId", "name")
+      .lean()
+      .exec();
+
+    return mapArticle(populated as Record<string, unknown>);
   }
 
   async remove(id: string, organizationId: string) {
-    const existing = await prisma.knowledgeArticle.findFirst({
-      where: { id, organizationId },
+    const articleId = requireObjectId(id);
+    const orgId = requireObjectId(organizationId);
+
+    const existing = await KnowledgeArticle.findOneAndDelete({
+      _id: articleId,
+      organizationId: orgId,
     });
 
     if (!existing) {
       throw new AppError("Article not found", 404, "ARTICLE_NOT_FOUND");
     }
 
-    await prisma.knowledgeArticle.delete({ where: { id } });
     return { id };
   }
 
-  /** Distinct categories for filter UI */
   async listCategories(organizationId: string) {
-    const rows = await prisma.knowledgeArticle.findMany({
-      where: {
-        organizationId,
-        category: { not: null },
-      },
-      select: { category: true },
-      distinct: ["category"],
-      orderBy: { category: "asc" },
+    const orgId = requireObjectId(organizationId);
+    const rows = await KnowledgeArticle.distinct("category", {
+      organizationId: orgId,
+      category: { $ne: null },
     });
-
-    return rows
-      .map((r) => r.category)
-      .filter((c): c is string => Boolean(c));
+    return (rows as (string | null)[])
+      .filter((c): c is string => Boolean(c))
+      .sort();
   }
 
-  /** Articles that need embedding regeneration (Phase 6) */
   async listNeedingEmbedding(organizationId: string, limit = 50) {
-    return prisma.knowledgeArticle.findMany({
-      where: {
-        organizationId,
-        status: "PUBLISHED",
-        OR: [{ embedding: { equals: null } }, { embeddingUpdatedAt: null }],
-      },
-      select: {
-        id: true,
-        title: true,
-        content: true,
-        updatedAt: true,
-      },
-      take: limit,
-      orderBy: { updatedAt: "desc" },
-    });
+    const orgId = requireObjectId(organizationId);
+    return KnowledgeArticle.find({
+      organizationId: orgId,
+      status: ArticleStatus.PUBLISHED,
+      $or: [{ embedding: null }, { embeddingUpdatedAt: null }],
+    })
+      .select("title content updatedAt")
+      .sort({ updatedAt: -1 })
+      .limit(limit)
+      .lean()
+      .exec()
+      .then((rows) =>
+        rows.map((r) => ({
+          id: r._id.toString(),
+          title: r.title,
+          content: r.content,
+          updatedAt: r.updatedAt,
+        }))
+      );
   }
 }
 
