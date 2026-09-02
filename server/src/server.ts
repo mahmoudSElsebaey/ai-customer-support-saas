@@ -3,6 +3,7 @@ import app from "./app.js";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { prisma } from "./lib/prisma.js";
+import { connectDatabase, disconnectDatabase } from "./config/database.js";
 import { initSocket } from "./socket/index.js";
 import { initSentry, captureException } from "./lib/sentry.js";
 
@@ -12,8 +13,19 @@ let shuttingDown = false;
 async function bootstrap() {
   try {
     await initSentry();
-    await prisma.$connect();
-    logger.info("Database connected");
+
+    // Primary DB after migration (Auth already on MongoDB)
+    if (env.MONGODB_URI) {
+      await connectDatabase();
+    } else {
+      logger.warn("MONGODB_URI not set — MongoDB features unavailable");
+    }
+
+    // Legacy Prisma connection kept until remaining services migrate (Phase 3+)
+    if (env.DATABASE_URL) {
+      await prisma.$connect();
+      logger.info("Prisma (PostgreSQL) connected — transitional");
+    }
 
     httpServer = http.createServer(app);
     initSocket(httpServer);
@@ -24,6 +36,8 @@ async function bootstrap() {
           port: env.PORT,
           env: env.NODE_ENV,
           version: "0.13.0",
+          mongodb: Boolean(env.MONGODB_URI),
+          postgres: Boolean(env.DATABASE_URL),
         },
         "Voxly API listening"
       );
@@ -53,8 +67,15 @@ async function shutdown(signal: string) {
       });
       logger.info("HTTP server closed");
     }
-    await prisma.$disconnect();
-    logger.info("Database disconnected");
+
+    if (env.MONGODB_URI) {
+      await disconnectDatabase();
+    }
+    if (env.DATABASE_URL) {
+      await prisma.$disconnect();
+      logger.info("Prisma disconnected");
+    }
+
     process.exit(0);
   } catch (error) {
     logger.error({ error }, "Error during shutdown");
