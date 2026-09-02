@@ -14,6 +14,7 @@ import KnowledgeList from "./pages/KnowledgeList";
 import KnowledgeDetail from "./pages/KnowledgeDetail";
 import KnowledgeForm from "./pages/KnowledgeForm";
 import Analytics from "./pages/Analytics";
+import Billing from "./pages/Billing";
 import DashboardLayout from "./layouts/DashboardLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -119,6 +120,7 @@ function App() {
         <Route path="/knowledge/:id" element={<KnowledgeDetail />} />
         <Route path="/knowledge/:id/edit" element={<KnowledgeForm />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/billing" element={<Billing />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

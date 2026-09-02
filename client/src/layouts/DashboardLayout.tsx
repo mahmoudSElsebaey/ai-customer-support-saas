@@ -10,6 +10,7 @@ const navItems = [
   { path: "/customers", labelKey: "nav.customers" },
   { path: "/knowledge", labelKey: "nav.knowledge" },
   { path: "/analytics", labelKey: "nav.analytics" },
+  { path: "/billing", labelKey: "nav.billing" },
 ];
 
 export default function DashboardLayout() {
@@ -34,15 +35,15 @@ export default function DashboardLayout() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="mx-auto max-w-7xl px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link to="/dashboard" className="flex items-center gap-2">
+          <div className="flex items-center gap-6">
+            <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
               <div className="h-7 w-7 rounded-lg bg-primary-600 flex items-center justify-center text-white font-bold text-xs">
                 V
               </div>
               <span className="font-semibold tracking-tight">Voxly</span>
             </Link>
 
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden lg:flex items-center gap-1">
               {navItems.map((item) => {
                 const active =
                   item.path === "/dashboard"
@@ -53,7 +54,7 @@ export default function DashboardLayout() {
                     key={item.path}
                     to={item.path}
                     className={cn(
-                      "px-3 py-1.5 rounded-md text-sm font-medium transition",
+                      "px-2.5 py-1.5 rounded-md text-sm font-medium transition",
                       active
                         ? "bg-primary-50 text-primary-700"
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
