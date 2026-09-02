@@ -15,7 +15,7 @@ export function getStripe(): Stripe {
 
   if (!stripe) {
     stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-      apiVersion: "2025-02-24.acacia",
+      // Use account default API version from the SDK
       typescript: true,
     });
   }
