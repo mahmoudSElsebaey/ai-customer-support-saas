@@ -1,4 +1,5 @@
-import { prisma } from "../lib/prisma.js";
+import mongoose from "mongoose";
+import { AIUsage } from "../models/AIUsage.js";
 import { estimateCost } from "../lib/openai.js";
 
 interface TrackInput {
@@ -11,6 +12,10 @@ interface TrackInput {
 
 export class AIUsageService {
   async track(input: TrackInput) {
+    if (!mongoose.Types.ObjectId.isValid(input.organizationId)) {
+      return null;
+    }
+
     const totalTokens = input.promptTokens + input.completionTokens;
     const estimatedCost = estimateCost(
       input.model,
@@ -18,34 +23,38 @@ export class AIUsageService {
       input.completionTokens
     );
 
-    return prisma.aIUsage.create({
-      data: {
-        organizationId: input.organizationId,
-        feature: input.feature,
-        model: input.model,
-        promptTokens: input.promptTokens,
-        completionTokens: input.completionTokens,
-        totalTokens,
-        estimatedCost,
-      },
+    return AIUsage.create({
+      organizationId: new mongoose.Types.ObjectId(input.organizationId),
+      feature: input.feature,
+      model: input.model,
+      promptTokens: input.promptTokens,
+      completionTokens: input.completionTokens,
+      totalTokens,
+      estimatedCost,
     });
   }
 
   async summary(organizationId: string, days = 30) {
+    if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+      return {
+        periodDays: days,
+        totalRequests: 0,
+        totalTokens: 0,
+        totalCost: 0,
+        byFeature: {},
+      };
+    }
+
     const since = new Date();
     since.setDate(since.getDate() - days);
 
-    const rows = await prisma.aIUsage.findMany({
-      where: {
-        organizationId,
-        createdAt: { gte: since },
-      },
-      select: {
-        feature: true,
-        totalTokens: true,
-        estimatedCost: true,
-      },
-    });
+    const rows = await AIUsage.find({
+      organizationId: new mongoose.Types.ObjectId(organizationId),
+      createdAt: { $gte: since },
+    })
+      .select("feature totalTokens estimatedCost")
+      .lean()
+      .exec();
 
     const byFeature: Record<
       string,
