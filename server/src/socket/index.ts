@@ -1,9 +1,11 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
+import mongoose from "mongoose";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
-import { prisma } from "../lib/prisma.js";
 import { User } from "../models/User.js";
+import { Ticket } from "../models/Ticket.js";
+import { Message } from "../models/Message.js";
 import { socketAuth } from "./auth.js";
 import {
   addPresence,
@@ -49,11 +51,9 @@ export function initSocket(httpServer: HttpServer) {
       "Socket connected"
     );
 
-    // Join organization room (for ticket list updates, presence)
     const orgRoom = `org:${user.organizationId}`;
     socket.join(orgRoom);
 
-    // Presence
     const becameOnline = addPresence(
       user.organizationId,
       user.id,
@@ -69,33 +69,31 @@ export function initSocket(httpServer: HttpServer) {
       });
     }
 
-    // Send current online list to this socket
     socket.emit("presence:list", {
       onlineUserIds: getOnlineUserIds(user.organizationId),
     });
 
-    // Update lastSeenAt on MongoDB users (Auth is on Mongoose since Phase 2)
     User.findByIdAndUpdate(user.id, { lastSeenAt: new Date() }).catch(() => {});
 
-    // —— Ticket rooms ——
-    // Ticket/message queries still use Prisma until Phase 3 domain migration
     socket.on("ticket:join", async (ticketId) => {
       try {
-        const ticket = await prisma.ticket.findFirst({
-          where: {
-            id: ticketId,
-            organizationId: user.organizationId,
-          },
-          select: { id: true, assignedAgentId: true },
-        });
+        if (!mongoose.Types.ObjectId.isValid(ticketId)) return;
+        if (!mongoose.Types.ObjectId.isValid(user.organizationId)) return;
+
+        const ticket = await Ticket.findOne({
+          _id: ticketId,
+          organizationId: user.organizationId,
+        })
+          .select("assignedAgentId")
+          .lean();
 
         if (!ticket) return;
 
-        // Agents can only join assigned or unassigned tickets
+        const assignedId = ticket.assignedAgentId?.toString() ?? null;
         if (
           user.role === "AGENT" &&
-          ticket.assignedAgentId &&
-          ticket.assignedAgentId !== user.id
+          assignedId &&
+          assignedId !== user.id
         ) {
           return;
         }
@@ -111,7 +109,6 @@ export function initSocket(httpServer: HttpServer) {
       socket.leave(`ticket:${ticketId}`);
     });
 
-    // —— Typing ——
     socket.on("typing:start", ({ ticketId }) => {
       socket.to(`ticket:${ticketId}`).emit("typing:start", {
         ticketId,
@@ -127,37 +124,46 @@ export function initSocket(httpServer: HttpServer) {
       });
     });
 
-    // —— Read receipts ——
     socket.on("message:read", async ({ ticketId, messageId }) => {
       try {
-        const message = await prisma.message.findFirst({
-          where: {
-            id: messageId,
-            ticketId,
-            ticket: { organizationId: user.organizationId },
-          },
+        if (
+          !mongoose.Types.ObjectId.isValid(ticketId) ||
+          !mongoose.Types.ObjectId.isValid(messageId) ||
+          !mongoose.Types.ObjectId.isValid(user.organizationId)
+        ) {
+          return;
+        }
+
+        const ticket = await Ticket.findOne({
+          _id: ticketId,
+          organizationId: user.organizationId,
+        })
+          .select("_id")
+          .lean();
+
+        if (!ticket) return;
+
+        const message = await Message.findOne({
+          _id: messageId,
+          ticketId,
         });
 
         if (!message || message.readAt) return;
 
-        const updated = await prisma.message.update({
-          where: { id: messageId },
-          data: { readAt: new Date() },
-        });
+        message.readAt = new Date();
+        await message.save();
 
         io!.to(`ticket:${ticketId}`).emit("message:read", {
           ticketId,
           messageId,
-          readAt: updated.readAt!.toISOString(),
+          readAt: message.readAt.toISOString(),
         });
       } catch (err) {
         logger.error({ err }, "message:read error");
       }
     });
 
-    socket.on("presence:ping", () => {
-      // keep-alive; presence already tracked by connection
-    });
+    socket.on("presence:ping", () => {});
 
     socket.on("disconnect", () => {
       const wentOffline = removePresence(
@@ -181,14 +187,21 @@ export function initSocket(httpServer: HttpServer) {
   return io;
 }
 
-/** Emit helpers used by HTTP services */
-export function emitToOrg(organizationId: string, event: keyof ServerToClientEvents, payload: unknown) {
+export function emitToOrg(
+  organizationId: string,
+  event: keyof ServerToClientEvents,
+  payload: unknown
+) {
   if (!io) return;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (io.to(`org:${organizationId}`) as any).emit(event, payload);
 }
 
-export function emitToTicket(ticketId: string, event: keyof ServerToClientEvents, payload: unknown) {
+export function emitToTicket(
+  ticketId: string,
+  event: keyof ServerToClientEvents,
+  payload: unknown
+) {
   if (!io) return;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (io.to(`ticket:${ticketId}`) as any).emit(event, payload);
