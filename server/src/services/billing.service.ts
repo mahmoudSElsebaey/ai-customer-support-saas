@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
-import { prisma } from "../lib/prisma.js";
+import mongoose from "mongoose";
+import { Organization } from "../models/Organization.js";
 import { getStripe } from "../lib/stripe.js";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
@@ -8,25 +9,26 @@ import {
   isStripeEnabled,
   planFromPriceId,
 } from "../config/plans.js";
-import type { Plan, PlanStatus } from "@prisma/client";
+import { Plan, PlanStatus, type Plan as PlanType } from "../types/enums.js";
 import { logger } from "../lib/logger.js";
+import { toId } from "../utils/serialize.js";
 
 function mapSubscriptionStatus(status: Stripe.Subscription.Status): PlanStatus {
   switch (status) {
     case "active":
-      return "ACTIVE";
+      return PlanStatus.ACTIVE;
     case "past_due":
-      return "PAST_DUE";
+      return PlanStatus.PAST_DUE;
     case "canceled":
     case "unpaid":
-      return "CANCELED";
+      return PlanStatus.CANCELED;
     case "trialing":
-      return "TRIALING";
+      return PlanStatus.TRIALING;
     case "incomplete":
     case "incomplete_expired":
-      return "INCOMPLETE";
+      return PlanStatus.INCOMPLETE;
     default:
-      return "ACTIVE";
+      return PlanStatus.ACTIVE;
   }
 }
 
@@ -48,28 +50,31 @@ export class BillingService {
   }
 
   async getSubscription(organizationId: string) {
-    const org = await prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: {
-        id: true,
-        name: true,
-        plan: true,
-        planStatus: true,
-        stripeCustomerId: true,
-        stripeSubscriptionId: true,
-        stripePriceId: true,
-        currentPeriodEnd: true,
-      },
-    });
+    if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+      throw new AppError("Organization not found", 404, "ORG_NOT_FOUND");
+    }
+
+    const org = await Organization.findById(organizationId)
+      .select(
+        "name plan planStatus stripeCustomerId stripeSubscriptionId stripePriceId currentPeriodEnd"
+      )
+      .lean();
 
     if (!org) {
       throw new AppError("Organization not found", 404, "ORG_NOT_FOUND");
     }
 
-    const planDef = PLAN_CATALOG[org.plan];
+    const planDef = PLAN_CATALOG[org.plan as PlanType];
 
     return {
-      ...org,
+      id: org._id.toString(),
+      name: org.name,
+      plan: org.plan,
+      planStatus: org.planStatus,
+      stripeCustomerId: org.stripeCustomerId ?? null,
+      stripeSubscriptionId: org.stripeSubscriptionId ?? null,
+      stripePriceId: org.stripePriceId ?? null,
+      currentPeriodEnd: org.currentPeriodEnd ?? null,
       planName: planDef.name,
       features: planDef.features,
       limits: planDef.limits,
@@ -82,9 +87,7 @@ export class BillingService {
     email: string,
     name: string
   ) {
-    const org = await prisma.organization.findUnique({
-      where: { id: organizationId },
-    });
+    const org = await Organization.findById(organizationId);
     if (!org) {
       throw new AppError("Organization not found", 404, "ORG_NOT_FOUND");
     }
@@ -100,10 +103,8 @@ export class BillingService {
       metadata: { organizationId },
     });
 
-    await prisma.organization.update({
-      where: { id: organizationId },
-      data: { stripeCustomerId: customer.id },
-    });
+    org.stripeCustomerId = customer.id;
+    await org.save();
 
     return customer.id;
   }
@@ -112,9 +113,9 @@ export class BillingService {
     organizationId: string,
     userEmail: string,
     userName: string,
-    plan: Plan
+    plan: PlanType
   ) {
-    if (plan === "FREE") {
+    if (plan === Plan.FREE) {
       throw new AppError("Cannot checkout Free plan", 400, "INVALID_PLAN");
     }
 
@@ -125,6 +126,10 @@ export class BillingService {
         503,
         "PRICE_NOT_CONFIGURED"
       );
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+      throw new AppError("Organization not found", 404, "ORG_NOT_FOUND");
     }
 
     const customerId = await this.ensureStripeCustomer(
@@ -157,9 +162,11 @@ export class BillingService {
   }
 
   async createPortalSession(organizationId: string) {
-    const org = await prisma.organization.findUnique({
-      where: { id: organizationId },
-    });
+    if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+      throw new AppError("Organization not found", 404, "ORG_NOT_FOUND");
+    }
+
+    const org = await Organization.findById(organizationId).lean();
 
     if (!org?.stripeCustomerId) {
       throw new AppError(
@@ -226,12 +233,6 @@ export class BillingService {
   }
 
   private async onCheckoutCompleted(session: Stripe.Checkout.Session) {
-    const organizationId =
-      session.metadata?.organizationId ||
-      (session.subscription
-        ? undefined
-        : undefined);
-
     if (!session.subscription) return;
 
     const stripe = getStripe();
@@ -241,7 +242,10 @@ export class BillingService {
         : session.subscription.id;
 
     const sub = await stripe.subscriptions.retrieve(subId);
-    await this.syncSubscription(sub, organizationId ?? session.metadata?.organizationId);
+    await this.syncSubscription(
+      sub,
+      session.metadata?.organizationId
+    );
   }
 
   private async syncSubscription(
@@ -255,7 +259,7 @@ export class BillingService {
         typeof sub.customer === "string" ? sub.customer : sub.customer.id
       ));
 
-    if (!organizationId) {
+    if (!organizationId || !mongoose.Types.ObjectId.isValid(organizationId)) {
       logger.warn({ subId: sub.id }, "Subscription without organizationId");
       return;
     }
@@ -266,17 +270,14 @@ export class BillingService {
       ? new Date(sub.current_period_end * 1000)
       : null;
 
-    await prisma.organization.update({
-      where: { id: organizationId },
-      data: {
-        plan,
-        planStatus: mapSubscriptionStatus(sub.status),
-        stripeSubscriptionId: sub.id,
-        stripePriceId: priceId,
-        stripeCustomerId:
-          typeof sub.customer === "string" ? sub.customer : sub.customer.id,
-        currentPeriodEnd: periodEnd,
-      },
+    await Organization.findByIdAndUpdate(organizationId, {
+      plan,
+      planStatus: mapSubscriptionStatus(sub.status),
+      stripeSubscriptionId: sub.id,
+      stripePriceId: priceId,
+      stripeCustomerId:
+        typeof sub.customer === "string" ? sub.customer : sub.customer.id,
+      currentPeriodEnd: periodEnd,
     });
   }
 
@@ -287,26 +288,26 @@ export class BillingService {
         typeof sub.customer === "string" ? sub.customer : sub.customer.id
       ));
 
-    if (!organizationId) return;
+    if (!organizationId || !mongoose.Types.ObjectId.isValid(organizationId)) {
+      return;
+    }
 
-    await prisma.organization.update({
-      where: { id: organizationId },
-      data: {
-        plan: "FREE",
-        planStatus: "CANCELED",
-        stripeSubscriptionId: null,
-        stripePriceId: null,
-        currentPeriodEnd: null,
-      },
+    await Organization.findByIdAndUpdate(organizationId, {
+      plan: Plan.FREE,
+      planStatus: PlanStatus.CANCELED,
+      stripeSubscriptionId: null,
+      stripePriceId: null,
+      currentPeriodEnd: null,
     });
   }
 
   private async findOrgIdByCustomer(customerId: string) {
-    const org = await prisma.organization.findFirst({
-      where: { stripeCustomerId: customerId },
-      select: { id: true },
-    });
-    return org?.id;
+    const org = await Organization.findOne({
+      stripeCustomerId: customerId,
+    })
+      .select("_id")
+      .lean();
+    return toId(org?._id) ?? undefined;
   }
 }
 
