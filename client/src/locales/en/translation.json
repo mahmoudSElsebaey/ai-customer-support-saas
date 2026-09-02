@@ -14,7 +14,8 @@
     "dashboard": "Dashboard",
     "tickets": "Tickets",
     "customers": "Customers",
-    "knowledge": "Knowledge"
+    "knowledge": "Knowledge",
+    "analytics": "Analytics"
   },
   "auth": {
     "login": "Log in",
@@ -124,5 +125,22 @@
     "ragUsed": "Grounded in KB",
     "embedArticles": "Index for AI",
     "embedResult": "Indexed {{ok}} / {{total}} articles"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Performance overview · last {{days}} days",
+    "created": "Tickets created",
+    "resolved": "Tickets resolved",
+    "avgFirstResponse": "Avg first response",
+    "avgResolution": "Avg resolution",
+    "volume": "Ticket volume",
+    "byStatus": "By status",
+    "byPriority": "Active by priority",
+    "agentWorkload": "Agent workload",
+    "noAgents": "No assigned active tickets",
+    "aiUsage": "AI usage",
+    "aiRequests": "AI requests",
+    "aiTokens": "Tokens",
+    "aiCost": "Est. cost"
   }
 }

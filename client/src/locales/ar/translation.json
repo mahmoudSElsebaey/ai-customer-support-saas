@@ -14,7 +14,8 @@
     "dashboard": "لوحة التحكم",
     "tickets": "التذاكر",
     "customers": "العملاء",
-    "knowledge": "قاعدة المعرفة"
+    "knowledge": "قاعدة المعرفة",
+    "analytics": "التحليلات"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -124,5 +125,22 @@
     "ragUsed": "مستند إلى قاعدة المعرفة",
     "embedArticles": "فهرسة للذكاء الاصطناعي",
     "embedResult": "تمت فهرسة {{ok}} / {{total}} مقال"
+  },
+  "analytics": {
+    "title": "التحليلات",
+    "subtitle": "نظرة على الأداء · آخر {{days}} يومًا",
+    "created": "تذاكر مُنشأة",
+    "resolved": "تذاكر محلولة",
+    "avgFirstResponse": "متوسط أول رد",
+    "avgResolution": "متوسط وقت الحل",
+    "volume": "حجم التذاكر",
+    "byStatus": "حسب الحالة",
+    "byPriority": "النشطة حسب الأولوية",
+    "agentWorkload": "حمل الوكلاء",
+    "noAgents": "لا توجد تذاكر نشطة مسندة",
+    "aiUsage": "استخدام الذكاء الاصطناعي",
+    "aiRequests": "طلبات AI",
+    "aiTokens": "Tokens",
+    "aiCost": "تكلفة تقديرية"
   }
 }

@@ -1,45 +1,32 @@
 # Voxly — AI Customer Support SaaS
 
-> **Status:** Phase 8 — Agent Workspace UX ✅
+> **Status:** Phase 9 — Analytics & Reporting ✅
 
-## Agent workspace (Phase 8)
-
-- Queue views: **All active / Mine / Unassigned / Urgent / Open** with live counts
-- Auto-refresh ticket list (15s) + workspace stats (20s)
-- **Assign to me** on ticket detail
-- **Quick replies** (canned responses) picker in the composer
-- Dashboard cards: active, mine, unassigned, urgent, resolved today
-- Urgent rows highlighted in the queue
-
-### Canned responses API
+## Analytics
 
 ```
-GET    /api/canned-responses
-POST   /api/canned-responses
-PATCH  /api/canned-responses/:id
-DELETE /api/canned-responses/:id
+GET /api/analytics/overview?days=30
 ```
 
-### Workspace stats
+Returns (org-scoped):
 
-```
-GET /api/tickets/stats/workspace
-```
+- Totals: active, created/resolved in period, customers, published articles
+- By status & priority
+- Daily volume series
+- Avg first response time & avg resolution time
+- Agent workload
+- AI usage (requests, tokens, estimated cost by feature)
 
-After pull:
-
-```bash
-cd server && npx prisma migrate dev --name canned_responses
-```
+UI: **Analytics** in the main nav — period toggles 7 / 14 / 30 days.
 
 ## Phases
 
 | Phase | Status |
 |-------|--------|
-| 0–7 | ✅ |
-| 8 Agent Workspace UX | ✅ |
-| 9 Analytics | Next |
-| 10–13 | Planned |
+| 0–8 | ✅ |
+| 9 Analytics | ✅ |
+| 10 Production hardening | Next |
+| 11–13 | Planned |
 
 ## License
 
