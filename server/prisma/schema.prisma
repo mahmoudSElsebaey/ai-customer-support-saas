@@ -1,5 +1,5 @@
 // Voxly — AI Customer Support SaaS
-// Phases 1–5: Core + Auth + Support + Knowledge Base
+// Phases 1–8
 
 generator client {
   provider = "prisma-client-js"
@@ -67,6 +67,7 @@ model Organization {
   tickets           Ticket[]
   knowledgeArticles KnowledgeArticle[]
   aiUsages         AIUsage[]
+  cannedResponses   CannedResponse[]
 
   @@map("organizations")
 }
@@ -84,11 +85,12 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  assignedTickets Ticket[]       @relation("AssignedAgent")
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedTickets Ticket[]         @relation("AssignedAgent")
   messages        Message[]
   refreshTokens   RefreshToken[]
   articles        KnowledgeArticle[] @relation("ArticleAuthor")
+  cannedResponses CannedResponse[] @relation("CannedAuthor")
 
   @@unique([email, organizationId])
   @@index([organizationId])
@@ -176,23 +178,20 @@ model Message {
 }
 
 model KnowledgeArticle {
-  id             String        @id @default(cuid())
-  organizationId String
-  title          String
-  content        String
-  /// Short plain-text excerpt for search/list cards
-  excerpt        String?
-  category       String?
-  tags           String[]      @default([])
-  status         ArticleStatus @default(DRAFT)
-  authorId       String?
-  /// Placeholder for future pgvector embedding (Phase 6–7)
-  /// Store as JSON array until pgvector extension is enabled
-  embedding      Json?
+  id                 String        @id @default(cuid())
+  organizationId     String
+  title              String
+  content            String
+  excerpt            String?
+  category           String?
+  tags               String[]      @default([])
+  status             ArticleStatus @default(DRAFT)
+  authorId           String?
+  embedding          Json?
   embeddingUpdatedAt DateTime?
-  publishedAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  publishedAt        DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   author       User?        @relation("ArticleAuthor", fields: [authorId], references: [id], onDelete: SetNull)
@@ -201,6 +200,25 @@ model KnowledgeArticle {
   @@index([organizationId, status])
   @@index([organizationId, category])
   @@map("knowledge_articles")
+}
+
+model CannedResponse {
+  id             String   @id @default(cuid())
+  organizationId String
+  title          String
+  content        String
+  shortcut       String?
+  category       String?
+  authorId       String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       User?        @relation("CannedAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@map("canned_responses")
 }
 
 model AIUsage {
