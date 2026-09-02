@@ -9,6 +9,7 @@ const navItems = [
   { path: "/tickets", labelKey: "nav.tickets" },
   { path: "/customers", labelKey: "nav.customers" },
   { path: "/knowledge", labelKey: "nav.knowledge" },
+  { path: "/analytics", labelKey: "nav.analytics" },
 ];
 
 export default function DashboardLayout() {
@@ -41,7 +42,7 @@ export default function DashboardLayout() {
               <span className="font-semibold tracking-tight">Voxly</span>
             </Link>
 
-            <nav className="hidden sm:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {
                 const active =
                   item.path === "/dashboard"
