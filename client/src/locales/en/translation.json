@@ -13,7 +13,8 @@
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
-    "customers": "Customers"
+    "customers": "Customers",
+    "knowledge": "Knowledge"
   },
   "auth": {
     "login": "Log in",
@@ -67,5 +68,26 @@
     "phone": "Phone",
     "notes": "Notes",
     "viewProfile": "View profile"
+  },
+  "knowledge": {
+    "title": "Knowledge base",
+    "create": "New article",
+    "edit": "Edit article",
+    "total": "articles",
+    "empty": "No articles yet",
+    "notFound": "Article not found",
+    "articleTitle": "Title",
+    "content": "Content",
+    "excerpt": "Excerpt",
+    "excerptHint": "Optional short summary for lists",
+    "category": "Category",
+    "tags": "Tags",
+    "tagsHint": "Comma-separated",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "allCategories": "All categories",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "confirmDelete": "Delete this article?"
   }
 }

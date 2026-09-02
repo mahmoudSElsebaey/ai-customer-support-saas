@@ -8,6 +8,7 @@ const navItems = [
   { path: "/dashboard", labelKey: "nav.dashboard" },
   { path: "/tickets", labelKey: "nav.tickets" },
   { path: "/customers", labelKey: "nav.customers" },
+  { path: "/knowledge", labelKey: "nav.knowledge" },
 ];
 
 export default function DashboardLayout() {

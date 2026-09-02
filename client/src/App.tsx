@@ -10,6 +10,9 @@ import CreateTicket from "./pages/CreateTicket";
 import CustomersList from "./pages/CustomersList";
 import CustomerDetail from "./pages/CustomerDetail";
 import CreateCustomer from "./pages/CreateCustomer";
+import KnowledgeList from "./pages/KnowledgeList";
+import KnowledgeDetail from "./pages/KnowledgeDetail";
+import KnowledgeForm from "./pages/KnowledgeForm";
 import DashboardLayout from "./layouts/DashboardLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -110,6 +113,10 @@ function App() {
         <Route path="/customers" element={<CustomersList />} />
         <Route path="/customers/new" element={<CreateCustomer />} />
         <Route path="/customers/:id" element={<CustomerDetail />} />
+        <Route path="/knowledge" element={<KnowledgeList />} />
+        <Route path="/knowledge/new" element={<KnowledgeForm />} />
+        <Route path="/knowledge/:id" element={<KnowledgeDetail />} />
+        <Route path="/knowledge/:id/edit" element={<KnowledgeForm />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

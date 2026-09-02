@@ -13,7 +13,8 @@
   "nav": {
     "dashboard": "لوحة التحكم",
     "tickets": "التذاكر",
-    "customers": "العملاء"
+    "customers": "العملاء",
+    "knowledge": "قاعدة المعرفة"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -67,5 +68,26 @@
     "phone": "الهاتف",
     "notes": "ملاحظات",
     "viewProfile": "عرض الملف"
+  },
+  "knowledge": {
+    "title": "قاعدة المعرفة",
+    "create": "مقال جديد",
+    "edit": "تعديل المقال",
+    "total": "مقالات",
+    "empty": "لا توجد مقالات بعد",
+    "notFound": "المقال غير موجود",
+    "articleTitle": "العنوان",
+    "content": "المحتوى",
+    "excerpt": "مقتطف",
+    "excerptHint": "ملخص قصير اختياري للقوائم",
+    "category": "التصنيف",
+    "tags": "الوسوم",
+    "tagsHint": "مفصولة بفاصلة",
+    "status": "الحالة",
+    "allStatuses": "كل الحالات",
+    "allCategories": "كل التصنيفات",
+    "publish": "نشر",
+    "unpublish": "إلغاء النشر",
+    "confirmDelete": "حذف هذا المقال؟"
   }
 }
