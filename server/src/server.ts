@@ -5,18 +5,25 @@ import { logger } from "./lib/logger.js";
 import { prisma } from "./lib/prisma.js";
 import { initSocket } from "./socket/index.js";
 
+let httpServer: http.Server | null = null;
+let shuttingDown = false;
+
 async function bootstrap() {
   try {
     await prisma.$connect();
-    logger.info("✅ Database connected");
+    logger.info("Database connected");
 
-    const httpServer = http.createServer(app);
+    httpServer = http.createServer(app);
     initSocket(httpServer);
 
     httpServer.listen(env.PORT, () => {
-      logger.info(`🚀 Voxly API running on http://localhost:${env.PORT}`);
-      logger.info(`   Environment: ${env.NODE_ENV}`);
-      logger.info(`   Socket.IO ready`);
+      logger.info(
+        {
+          port: env.PORT,
+          env: env.NODE_ENV,
+        },
+        "Voxly API listening"
+      );
     });
   } catch (error) {
     logger.error({ error }, "Failed to start server");
@@ -24,16 +31,43 @@ async function bootstrap() {
   }
 }
 
-process.on("SIGTERM", async () => {
-  logger.info("SIGTERM received, shutting down...");
-  await prisma.$disconnect();
-  process.exit(0);
+async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info({ signal }, "Shutting down gracefully...");
+
+  const forceTimer = setTimeout(() => {
+    logger.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 15_000);
+  forceTimer.unref();
+
+  try {
+    if (httpServer) {
+      await new Promise<void>((resolve, reject) => {
+        httpServer!.close((err) => (err ? reject(err) : resolve()));
+      });
+      logger.info("HTTP server closed");
+    }
+    await prisma.$disconnect();
+    logger.info("Database disconnected");
+    process.exit(0);
+  } catch (error) {
+    logger.error({ error }, "Error during shutdown");
+    process.exit(1);
+  }
+}
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
+
+process.on("unhandledRejection", (reason) => {
+  logger.error({ reason }, "Unhandled rejection");
 });
 
-process.on("SIGINT", async () => {
-  logger.info("SIGINT received, shutting down...");
-  await prisma.$disconnect();
-  process.exit(0);
+process.on("uncaughtException", (error) => {
+  logger.error({ error }, "Uncaught exception");
+  void shutdown("uncaughtException");
 });
 
 bootstrap();
