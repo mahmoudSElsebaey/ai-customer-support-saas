@@ -8,6 +8,7 @@ import aiRoutes from "./ai.routes.js";
 import cannedRoutes from "./canned.routes.js";
 import analyticsRoutes from "./analytics.routes.js";
 import billingRoutes from "./billing.routes.js";
+import portalRoutes from "./portal.routes.js";
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use("/ai", aiRoutes);
 router.use("/canned-responses", cannedRoutes);
 router.use("/analytics", analyticsRoutes);
 router.use("/billing", billingRoutes);
+router.use("/portal", portalRoutes);
 
 export default router;
