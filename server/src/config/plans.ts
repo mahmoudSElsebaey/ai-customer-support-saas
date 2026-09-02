@@ -1,8 +1,8 @@
 import { env } from "./env.js";
-import type { Plan } from "@prisma/client";
+import { Plan, type Plan as PlanType } from "../types/enums.js";
 
 export interface PlanDefinition {
-  id: Plan;
+  id: PlanType;
   name: string;
   priceMonthly: number;
   currency: string;
@@ -16,9 +16,9 @@ export interface PlanDefinition {
   stripePriceId: string | null;
 }
 
-export const PLAN_CATALOG: Record<Plan, PlanDefinition> = {
+export const PLAN_CATALOG: Record<PlanType, PlanDefinition> = {
   FREE: {
-    id: "FREE",
+    id: Plan.FREE,
     name: "Free",
     priceMonthly: 0,
     currency: "usd",
@@ -37,7 +37,7 @@ export const PLAN_CATALOG: Record<Plan, PlanDefinition> = {
     stripePriceId: null,
   },
   PRO: {
-    id: "PRO",
+    id: Plan.PRO,
     name: "Pro",
     priceMonthly: 49,
     currency: "usd",
@@ -57,7 +57,7 @@ export const PLAN_CATALOG: Record<Plan, PlanDefinition> = {
     stripePriceId: env.STRIPE_PRICE_PRO ?? null,
   },
   BUSINESS: {
-    id: "BUSINESS",
+    id: Plan.BUSINESS,
     name: "Business",
     priceMonthly: 149,
     currency: "usd",
@@ -78,13 +78,13 @@ export const PLAN_CATALOG: Record<Plan, PlanDefinition> = {
   },
 };
 
-export function planFromPriceId(priceId: string | null | undefined): Plan {
-  if (!priceId) return "FREE";
-  if (env.STRIPE_PRICE_PRO && priceId === env.STRIPE_PRICE_PRO) return "PRO";
+export function planFromPriceId(priceId: string | null | undefined): PlanType {
+  if (!priceId) return Plan.FREE;
+  if (env.STRIPE_PRICE_PRO && priceId === env.STRIPE_PRICE_PRO) return Plan.PRO;
   if (env.STRIPE_PRICE_BUSINESS && priceId === env.STRIPE_PRICE_BUSINESS) {
-    return "BUSINESS";
+    return Plan.BUSINESS;
   }
-  return "FREE";
+  return Plan.FREE;
 }
 
 export function isStripeEnabled(): boolean {
