@@ -3,6 +3,7 @@ import { Server } from "socket.io";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { prisma } from "../lib/prisma.js";
+import { User } from "../models/User.js";
 import { socketAuth } from "./auth.js";
 import {
   addPresence,
@@ -73,15 +74,11 @@ export function initSocket(httpServer: HttpServer) {
       onlineUserIds: getOnlineUserIds(user.organizationId),
     });
 
-    // Update lastSeenAt
-    prisma.user
-      .update({
-        where: { id: user.id },
-        data: { lastSeenAt: new Date() },
-      })
-      .catch(() => {});
+    // Update lastSeenAt on MongoDB users (Auth is on Mongoose since Phase 2)
+    User.findByIdAndUpdate(user.id, { lastSeenAt: new Date() }).catch(() => {});
 
     // —— Ticket rooms ——
+    // Ticket/message queries still use Prisma until Phase 3 domain migration
     socket.on("ticket:join", async (ticketId) => {
       try {
         const ticket = await prisma.ticket.findFirst({
