@@ -1,4 +1,5 @@
-import { prisma } from "../lib/prisma.js";
+import mongoose from "mongoose";
+import { KnowledgeArticle } from "../models/KnowledgeArticle.js";
 import {
   getOpenAI,
   DEFAULT_EMBEDDING_MODEL,
@@ -6,8 +7,8 @@ import {
 import { aiUsageService } from "./ai-usage.service.js";
 import { logger } from "../lib/logger.js";
 import { AppError } from "../utils/AppError.js";
+import { ArticleStatus } from "../types/enums.js";
 
-/** Cosine similarity between two equal-length vectors */
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length === 0) return 0;
   let dot = 0;
@@ -52,8 +53,16 @@ export class EmbeddingService {
   }
 
   async embedArticle(articleId: string, organizationId: string) {
-    const article = await prisma.knowledgeArticle.findFirst({
-      where: { id: articleId, organizationId },
+    if (
+      !mongoose.Types.ObjectId.isValid(articleId) ||
+      !mongoose.Types.ObjectId.isValid(organizationId)
+    ) {
+      throw new AppError("Article not found", 404, "ARTICLE_NOT_FOUND");
+    }
+
+    const article = await KnowledgeArticle.findOne({
+      _id: articleId,
+      organizationId,
     });
 
     if (!article) {
@@ -63,48 +72,37 @@ export class EmbeddingService {
     const text = buildEmbedText(article.title, article.content, article.excerpt);
     const vector = await this.embedText(text, organizationId);
 
-    await prisma.knowledgeArticle.update({
-      where: { id: articleId },
-      data: {
-        embedding: vector,
-        embeddingUpdatedAt: new Date(),
-      },
-    });
+    article.embedding = vector;
+    article.embeddingUpdatedAt = new Date();
+    await article.save();
 
     return { id: articleId, dimensions: vector.length };
   }
 
-  /**
-   * Embed all published articles missing embeddings (or force refresh).
-   */
   async embedOrganization(
     organizationId: string,
     options: { force?: boolean; limit?: number } = {}
   ) {
-    const { force = false, limit = 50 } = options;
+    if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+      return { processed: 0, succeeded: 0, failed: 0, results: [] };
+    }
 
-    const articles = await prisma.knowledgeArticle.findMany({
-      where: {
-        organizationId,
-        status: "PUBLISHED",
-        ...(force
-          ? {}
-          : {
-              OR: [
-                { embedding: { equals: null } },
-                { embeddingUpdatedAt: null },
-              ],
-            }),
-      },
-      select: {
-        id: true,
-        title: true,
-        content: true,
-        excerpt: true,
-      },
-      take: limit,
-      orderBy: { updatedAt: "desc" },
-    });
+    const { force = false, limit = 50 } = options;
+    const orgId = new mongoose.Types.ObjectId(organizationId);
+
+    const filter: Record<string, unknown> = {
+      organizationId: orgId,
+      status: ArticleStatus.PUBLISHED,
+    };
+    if (!force) {
+      filter.$or = [{ embedding: null }, { embeddingUpdatedAt: null }];
+    }
+
+    const articles = await KnowledgeArticle.find(filter)
+      .select("title content excerpt")
+      .sort({ updatedAt: -1 })
+      .limit(limit)
+      .exec();
 
     const results: { id: string; ok: boolean; error?: string }[] = [];
 
@@ -116,18 +114,14 @@ export class EmbeddingService {
           article.excerpt
         );
         const vector = await this.embedText(text, organizationId);
-        await prisma.knowledgeArticle.update({
-          where: { id: article.id },
-          data: {
-            embedding: vector,
-            embeddingUpdatedAt: new Date(),
-          },
-        });
-        results.push({ id: article.id, ok: true });
+        article.embedding = vector;
+        article.embeddingUpdatedAt = new Date();
+        await article.save();
+        results.push({ id: article._id.toString(), ok: true });
       } catch (err) {
-        logger.error({ err, articleId: article.id }, "embed article failed");
+        logger.error({ err, articleId: article._id }, "embed article failed");
         results.push({
-          id: article.id,
+          id: article._id.toString(),
           ok: false,
           error: err instanceof Error ? err.message : "failed",
         });
@@ -142,46 +136,35 @@ export class EmbeddingService {
     };
   }
 
-  /**
-   * Semantic search over published articles with embeddings.
-   * In-app cosine similarity (works without pgvector).
-   * Scale path: replace with pgvector <=> operator later.
-   */
   async search(
     organizationId: string,
     query: string,
     topK = 5,
     minScore = 0.25
   ) {
+    if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+      return [];
+    }
+
     const queryVector = await this.embedText(query, organizationId);
 
-    const articles = await prisma.knowledgeArticle.findMany({
-      where: {
-        organizationId,
-        status: "PUBLISHED",
-        embedding: { not: null },
-      },
-      select: {
-        id: true,
-        title: true,
-        excerpt: true,
-        content: true,
-        category: true,
-        tags: true,
-        embedding: true,
-      },
-      take: 200, // soft cap for in-memory ranking
-    });
+    const articles = await KnowledgeArticle.find({
+      organizationId: new mongoose.Types.ObjectId(organizationId),
+      status: ArticleStatus.PUBLISHED,
+      embedding: { $ne: null, $exists: true },
+    })
+      .select("title excerpt content category tags embedding")
+      .limit(200)
+      .lean()
+      .exec();
 
     const scored = articles
       .map((a) => {
-        const emb = a.embedding as number[] | null;
-        if (!Array.isArray(emb) || emb.length === 0) {
-          return null;
-        }
+        const emb = a.embedding as number[] | null | undefined;
+        if (!Array.isArray(emb) || emb.length === 0) return null;
         const score = cosineSimilarity(queryVector, emb);
         return {
-          id: a.id,
+          id: a._id.toString(),
           title: a.title,
           excerpt: a.excerpt,
           content: a.content,
@@ -196,7 +179,6 @@ export class EmbeddingService {
 
     return scored.map(({ content, ...rest }) => ({
       ...rest,
-      // Truncate content for response / context building
       contentPreview: content.slice(0, 1200),
     }));
   }
