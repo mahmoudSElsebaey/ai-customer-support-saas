@@ -1,5 +1,11 @@
-import { prisma } from "../lib/prisma.js";
+import mongoose from "mongoose";
+import { Ticket } from "../models/Ticket.js";
+import { Message } from "../models/Message.js";
+import { Customer } from "../models/Customer.js";
+import { KnowledgeArticle } from "../models/KnowledgeArticle.js";
+import { User } from "../models/User.js";
 import { aiUsageService } from "./ai-usage.service.js";
+import { ArticleStatus } from "../types/enums.js";
 
 function startOfDay(d: Date) {
   const x = new Date(d);
@@ -19,74 +25,74 @@ function formatDay(d: Date) {
 
 export class AnalyticsService {
   async overview(organizationId: string, days = 30) {
+    if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+      throw new Error("Invalid organizationId");
+    }
+
+    const orgId = new mongoose.Types.ObjectId(organizationId);
     const since = daysAgo(days);
+    const activeStatuses = ["OPEN", "PENDING", "IN_PROGRESS"];
 
     const [
-      byStatus,
-      byPriority,
+      byStatusAgg,
+      byPriorityAgg,
       createdInPeriod,
       resolvedInPeriod,
       activeTickets,
       customersTotal,
       articlesPublished,
-      recentTickets,
       aiSummary,
+      agentLoadAgg,
     ] = await Promise.all([
-      prisma.ticket.groupBy({
-        by: ["status"],
-        where: { organizationId },
-        _count: { _all: true },
-      }),
-      prisma.ticket.groupBy({
-        by: ["priority"],
-        where: {
-          organizationId,
-          status: { in: ["OPEN", "PENDING", "IN_PROGRESS"] },
-        },
-        _count: { _all: true },
-      }),
-      prisma.ticket.findMany({
-        where: { organizationId, createdAt: { gte: since } },
-        select: { id: true, createdAt: true, status: true },
-      }),
-      prisma.ticket.findMany({
-        where: {
-          organizationId,
-          resolvedAt: { gte: since, not: null },
-        },
-        select: {
-          id: true,
-          createdAt: true,
-          resolvedAt: true,
-        },
-      }),
-      prisma.ticket.count({
-        where: {
-          organizationId,
-          status: { in: ["OPEN", "PENDING", "IN_PROGRESS"] },
-        },
-      }),
-      prisma.customer.count({ where: { organizationId } }),
-      prisma.knowledgeArticle.count({
-        where: { organizationId, status: "PUBLISHED" },
-      }),
-      prisma.ticket.findMany({
-        where: { organizationId, createdAt: { gte: since } },
-        select: {
-          id: true,
-          createdAt: true,
-          messages: {
-            where: { type: { in: ["AGENT", "INTERNAL_NOTE"] } },
-            orderBy: { createdAt: "asc" },
-            take: 1,
-            select: { createdAt: true },
+      Ticket.aggregate<{ _id: string; count: number }>([
+        { $match: { organizationId: orgId } },
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+      Ticket.aggregate<{ _id: string; count: number }>([
+        {
+          $match: {
+            organizationId: orgId,
+            status: { $in: activeStatuses },
           },
         },
+        { $group: { _id: "$priority", count: { $sum: 1 } } },
+      ]),
+      Ticket.find({
+        organizationId: orgId,
+        createdAt: { $gte: since },
+      })
+        .select("createdAt status")
+        .lean()
+        .exec(),
+      Ticket.find({
+        organizationId: orgId,
+        resolvedAt: { $gte: since, $ne: null },
+      })
+        .select("createdAt resolvedAt")
+        .lean()
+        .exec(),
+      Ticket.countDocuments({
+        organizationId: orgId,
+        status: { $in: activeStatuses },
+      }),
+      Customer.countDocuments({ organizationId: orgId }),
+      KnowledgeArticle.countDocuments({
+        organizationId: orgId,
+        status: ArticleStatus.PUBLISHED,
       }),
       aiUsageService.summary(organizationId, days),
+      Ticket.aggregate<{ _id: mongoose.Types.ObjectId; count: number }>([
+        {
+          $match: {
+            organizationId: orgId,
+            assignedAgentId: { $ne: null },
+            status: { $in: activeStatuses },
+          },
+        },
+        { $group: { _id: "$assignedAgentId", count: { $sum: 1 } } },
+      ]),
     ]);
 
-    // Volume series (created per day)
     const volumeMap = new Map<string, number>();
     for (let i = days - 1; i >= 0; i--) {
       volumeMap.set(formatDay(daysAgo(i)), 0);
@@ -102,7 +108,6 @@ export class AnalyticsService {
       count,
     }));
 
-    // Average resolution time (hours)
     const resolutionHours: number[] = [];
     for (const t of resolvedInPeriod) {
       if (!t.resolvedAt) continue;
@@ -120,13 +125,39 @@ export class AnalyticsService {
           )
         : null;
 
-    // First response time (hours until first agent message)
+    // First response: tickets created in period + first agent message
+    const recentTicketIds = createdInPeriod.map((t) => t._id);
+    const firstAgentMessages =
+      recentTicketIds.length > 0
+        ? await Message.aggregate<{
+            _id: mongoose.Types.ObjectId;
+            firstAt: Date;
+          }>([
+            {
+              $match: {
+                ticketId: { $in: recentTicketIds },
+                type: { $in: ["AGENT", "INTERNAL_NOTE"] },
+              },
+            },
+            { $sort: { createdAt: 1 } },
+            {
+              $group: {
+                _id: "$ticketId",
+                firstAt: { $first: "$createdAt" },
+              },
+            },
+          ])
+        : [];
+
+    const ticketCreatedMap = new Map(
+      createdInPeriod.map((t) => [t._id.toString(), t.createdAt])
+    );
     const firstResponseHours: number[] = [];
-    for (const t of recentTickets) {
-      const first = t.messages[0];
-      if (!first) continue;
+    for (const row of firstAgentMessages) {
+      const created = ticketCreatedMap.get(row._id.toString());
+      if (!created) continue;
       const hrs =
-        (first.createdAt.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60);
+        (row.firstAt.getTime() - created.getTime()) / (1000 * 60 * 60);
       if (hrs >= 0 && hrs < 24 * 30) firstResponseHours.push(hrs);
     }
     const avgFirstResponseHours =
@@ -140,44 +171,34 @@ export class AnalyticsService {
         : null;
 
     const statusMap: Record<string, number> = {};
-    for (const row of byStatus) {
-      statusMap[row.status] = row._count._all;
+    for (const row of byStatusAgg) {
+      statusMap[row._id] = row.count;
     }
 
     const priorityMap: Record<string, number> = {};
-    for (const row of byPriority) {
-      priorityMap[row.priority] = row._count._all;
+    for (const row of byPriorityAgg) {
+      priorityMap[row._id] = row.count;
     }
 
-    // Agent workload (assigned active tickets)
-    const agentLoad = await prisma.ticket.groupBy({
-      by: ["assignedAgentId"],
-      where: {
-        organizationId,
-        assignedAgentId: { not: null },
-        status: { in: ["OPEN", "PENDING", "IN_PROGRESS"] },
-      },
-      _count: { _all: true },
-    });
+    const agentIds = agentLoadAgg.map((a) => a._id);
+    const agents =
+      agentIds.length > 0
+        ? await User.find({
+            _id: { $in: agentIds },
+            organizationId: orgId,
+          })
+            .select("name email")
+            .lean()
+            .exec()
+        : [];
 
-    const agentIds = agentLoad
-      .map((a) => a.assignedAgentId)
-      .filter((id): id is string => Boolean(id));
+    const agentMap = new Map(agents.map((a) => [a._id.toString(), a]));
 
-    const agents = agentIds.length
-      ? await prisma.user.findMany({
-          where: { id: { in: agentIds }, organizationId },
-          select: { id: true, name: true, email: true },
-        })
-      : [];
-
-    const agentMap = new Map(agents.map((a) => [a.id, a]));
-
-    const agentWorkload = agentLoad
+    const agentWorkload = agentLoadAgg
       .map((row) => ({
-        agentId: row.assignedAgentId!,
-        name: agentMap.get(row.assignedAgentId!)?.name ?? "Unknown",
-        activeTickets: row._count._all,
+        agentId: row._id.toString(),
+        name: agentMap.get(row._id.toString())?.name ?? "Unknown",
+        activeTickets: row.count,
       }))
       .sort((a, b) => b.activeTickets - a.activeTickets);
 
