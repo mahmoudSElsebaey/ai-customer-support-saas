@@ -1,37 +1,42 @@
-# Voxly — Production checklist
+# Production checklist — Voxly
 
-## Required
+## Required environment
 
-- [ ] Strong `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` (≥ 32 random chars)
-- [ ] `DATABASE_URL` pointing to managed Postgres
-- [ ] `NODE_ENV=production`
-- [ ] `CLIENT_URL` = real frontend origin (HTTPS)
-- [ ] TLS terminated at reverse proxy / platform
-- [ ] `npx prisma migrate deploy` on release
+- `NODE_ENV=production`
+- `PORT` (platform-assigned or fixed)
+- `CLIENT_URL` — HTTPS frontend origin (CORS + cookies)
+- `MONGODB_URI` — MongoDB Atlas recommended (`retryWrites=true&w=majority`)
+- `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` — ≥ 32 random characters each
 
 ## Recommended
 
-- [ ] `OPENAI_API_KEY` for AI features
-- [ ] Stripe keys + webhook endpoint `https://api.example.com/api/billing/webhook`
-- [ ] `SENTRY_DSN` for error tracking
-- [ ] Health probes:
-  - Liveness: `GET /api/health`
-  - Readiness: `GET /api/health/ready`
-  - Metrics: `GET /api/health/metrics`
+- `OPENAI_API_KEY` — AI features
+- Stripe keys + webhook endpoint pointing to `/api/billing/webhook`
+- `SENTRY_DSN` — error tracking
 
-## Security notes
+## Security
 
-- Cookies: `httpOnly`, `secure` in production, `sameSite=none` when cross-site
-- Rate limits active on global / auth / AI routes
-- Multi-tenancy: never trust client `organizationId`
-- Webhook body must stay raw for Stripe signature verification
+- Serve API and client over HTTPS only
+- Cookies: `secure`, `httpOnly`, `sameSite` appropriate for your domain layout
+- Restrict CORS to `CLIENT_URL`
+- Rate limits enabled on auth routes (already in middleware)
+- Never commit `.env`
 
-## Docker
+## Process
 
 ```bash
-docker compose up --build
+cd server && npm ci && npm run build && npm start
+cd client && npm ci && npm run build
+# Serve client/dist via CDN or static host; API as Node process (PM2, Railway, Render, Fly, etc.)
 ```
 
-## Version
+## Database
 
-API reports `version: 0.13.0` on health endpoints.
+- Use a managed MongoDB (Atlas)
+- Enable backups and network IP allowlisting
+- Indexes are defined on Mongoose models and created on connection
+
+## Health
+
+- Liveness: `GET /api/health`
+- Readiness: `GET /api/health/ready` (expects `checks.mongodb === "ok"`)
