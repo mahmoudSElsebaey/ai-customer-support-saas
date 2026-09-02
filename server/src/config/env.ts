@@ -7,7 +7,10 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().default(5000),
   CLIENT_URL: z.string().url().default("http://localhost:5173"),
-  DATABASE_URL: z.string().min(1),
+  /** @deprecated Use MONGODB_URI after Phase 2 migration. Kept during transition. */
+  DATABASE_URL: z.string().min(1).optional(),
+  /** MongoDB connection string (primary after migration) */
+  MONGODB_URI: z.string().min(1).optional(),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
@@ -33,4 +36,15 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-export const env = parsed.data;
+const data = parsed.data;
+
+// During migration transition: at least one DB URL must be present.
+// After Phase 2+, only MONGODB_URI will be required.
+if (!data.DATABASE_URL && !data.MONGODB_URI) {
+  console.error(
+    "❌ Invalid environment variables: either DATABASE_URL (legacy) or MONGODB_URI is required"
+  );
+  process.exit(1);
+}
+
+export const env = data;
