@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { AppError } from "../utils/AppError.js";
-import type { Role } from "@prisma/client";
+import type { Role } from "../types/enums.js";
 
 /**
  * Protect routes – requires valid access token.
