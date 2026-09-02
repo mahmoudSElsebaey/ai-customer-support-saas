@@ -1,8 +1,18 @@
-import { prisma } from "../lib/prisma.js";
+import mongoose from "mongoose";
+import { Ticket } from "../models/Ticket.js";
 
 export class TicketStatsService {
   async workspaceStats(organizationId: string, agentId: string) {
-    const base = { organizationId };
+    const orgId = new mongoose.Types.ObjectId(organizationId);
+    const agentObjectId = mongoose.Types.ObjectId.isValid(agentId)
+      ? new mongoose.Types.ObjectId(agentId)
+      : null;
+
+    const activeStatuses = ["OPEN", "PENDING", "IN_PROGRESS"];
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const base = { organizationId: orgId };
 
     const [
       open,
@@ -13,44 +23,30 @@ export class TicketStatsService {
       mine,
       resolvedToday,
     ] = await Promise.all([
-      prisma.ticket.count({
-        where: { ...base, status: "OPEN" },
+      Ticket.countDocuments({ ...base, status: "OPEN" }),
+      Ticket.countDocuments({ ...base, status: "PENDING" }),
+      Ticket.countDocuments({ ...base, status: "IN_PROGRESS" }),
+      Ticket.countDocuments({
+        ...base,
+        priority: "URGENT",
+        status: { $in: activeStatuses },
       }),
-      prisma.ticket.count({
-        where: { ...base, status: "PENDING" },
+      Ticket.countDocuments({
+        ...base,
+        assignedAgentId: null,
+        status: { $in: activeStatuses },
       }),
-      prisma.ticket.count({
-        where: { ...base, status: "IN_PROGRESS" },
-      }),
-      prisma.ticket.count({
-        where: {
-          ...base,
-          priority: "URGENT",
-          status: { in: ["OPEN", "PENDING", "IN_PROGRESS"] },
-        },
-      }),
-      prisma.ticket.count({
-        where: {
-          ...base,
-          assignedAgentId: null,
-          status: { in: ["OPEN", "PENDING", "IN_PROGRESS"] },
-        },
-      }),
-      prisma.ticket.count({
-        where: {
-          ...base,
-          assignedAgentId: agentId,
-          status: { in: ["OPEN", "PENDING", "IN_PROGRESS"] },
-        },
-      }),
-      prisma.ticket.count({
-        where: {
-          ...base,
-          status: { in: ["RESOLVED", "CLOSED"] },
-          resolvedAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          },
-        },
+      agentObjectId
+        ? Ticket.countDocuments({
+            ...base,
+            assignedAgentId: agentObjectId,
+            status: { $in: activeStatuses },
+          })
+        : Promise.resolve(0),
+      Ticket.countDocuments({
+        ...base,
+        status: { $in: ["RESOLVED", "CLOSED"] },
+        resolvedAt: { $gte: startOfDay },
       }),
     ]);
 
