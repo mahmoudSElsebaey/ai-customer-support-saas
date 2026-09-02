@@ -18,8 +18,17 @@ export interface AnalyzeResponse {
   } | null;
 }
 
+export interface RagSource {
+  id: string;
+  title: string;
+  score: number;
+  category: string | null;
+}
+
 export interface SuggestReplyResponse {
   suggestion: string;
+  sources: RagSource[];
+  ragUsed: boolean;
   model: string;
   usage: {
     promptTokens: number;
@@ -47,11 +56,12 @@ export const aiApi = api.injectEndpoints({
     }),
     suggestReply: builder.mutation<
       { success: boolean; data: SuggestReplyResponse },
-      string
+      { ticketId: string; useRag?: boolean }
     >({
-      query: (ticketId) => ({
+      query: ({ ticketId, useRag = true }) => ({
         url: `/ai/tickets/${ticketId}/suggest-reply`,
         method: "POST",
+        body: { useRag },
       }),
     }),
     summarizeTicket: builder.mutation<
@@ -69,6 +79,43 @@ export const aiApi = api.injectEndpoints({
         url: `/ai/tickets/${ticketId}/summarize`,
         method: "POST",
       }),
+    }),
+    searchKnowledge: builder.query<
+      {
+        success: boolean;
+        data: {
+          id: string;
+          title: string;
+          score: number;
+          excerpt: string | null;
+          category: string | null;
+          contentPreview: string;
+        }[];
+      },
+      { q: string; topK?: number }
+    >({
+      query: ({ q, topK }) => ({
+        url: "/ai/knowledge/search",
+        params: { q, topK },
+      }),
+    }),
+    embedArticles: builder.mutation<
+      {
+        success: boolean;
+        data: {
+          processed: number;
+          succeeded: number;
+          failed: number;
+        };
+      },
+      { force?: boolean; limit?: number } | void
+    >({
+      query: (body) => ({
+        url: "/ai/knowledge/embed",
+        method: "POST",
+        body: body ?? {},
+      }),
+      invalidatesTags: ["KnowledgeArticle"],
     }),
     aiUsage: builder.query<
       {
@@ -99,5 +146,7 @@ export const {
   useAnalyzeTicketMutation,
   useSuggestReplyMutation,
   useSummarizeTicketMutation,
+  useSearchKnowledgeQuery,
+  useEmbedArticlesMutation,
   useAiUsageQuery,
 } = aiApi;

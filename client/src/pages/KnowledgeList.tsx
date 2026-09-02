@@ -5,6 +5,7 @@ import {
   useGetArticlesQuery,
   useGetCategoriesQuery,
 } from "@/features/knowledge/knowledgeApi";
+import { useEmbedArticlesMutation, useAiStatusQuery } from "@/features/ai/aiApi";
 import { StatusBadge } from "@/components/StatusBadge";
 
 export default function KnowledgeList() {
@@ -14,6 +15,7 @@ export default function KnowledgeList() {
   const [searchInput, setSearchInput] = useState("");
   const [status, setStatus] = useState("");
   const [category, setCategory] = useState("");
+  const [embedMsg, setEmbedMsg] = useState<string | null>(null);
 
   const { data, isLoading, isFetching } = useGetArticlesQuery({
     page,
@@ -24,9 +26,28 @@ export default function KnowledgeList() {
   });
 
   const { data: categoriesData } = useGetCategoriesQuery();
+  const { data: aiStatus } = useAiStatusQuery();
+  const [embedArticles, { isLoading: isEmbedding }] = useEmbedArticlesMutation();
+
   const categories = categoriesData?.data ?? [];
   const articles = data?.data?.items ?? [];
   const pagination = data?.data?.pagination;
+  const aiEnabled = aiStatus?.data?.enabled ?? false;
+
+  const handleEmbed = async () => {
+    setEmbedMsg(null);
+    try {
+      const res = await embedArticles({ force: false, limit: 50 }).unwrap();
+      setEmbedMsg(
+        t("ai.embedResult", {
+          ok: res.data.succeeded,
+          total: res.data.processed,
+        })
+      );
+    } catch {
+      setEmbedMsg(t("ai.error"));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -39,13 +60,31 @@ export default function KnowledgeList() {
             {pagination ? `${pagination.total} ${t("knowledge.total")}` : "—"}
           </p>
         </div>
-        <Link
-          to="/knowledge/new"
-          className="inline-flex items-center justify-center rounded-lg bg-primary-600 text-white text-sm font-medium px-4 py-2 hover:bg-primary-700 transition"
-        >
-          {t("knowledge.create")}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {aiEnabled && (
+            <button
+              type="button"
+              onClick={handleEmbed}
+              disabled={isEmbedding}
+              className="inline-flex items-center justify-center rounded-lg border border-slate-300 text-slate-700 text-sm font-medium px-4 py-2 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {isEmbedding ? t("common.loading") : t("ai.embedArticles")}
+            </button>
+          )}
+          <Link
+            to="/knowledge/new"
+            className="inline-flex items-center justify-center rounded-lg bg-primary-600 text-white text-sm font-medium px-4 py-2 hover:bg-primary-700 transition"
+          >
+            {t("knowledge.create")}
+          </Link>
+        </div>
       </div>
+
+      {embedMsg && (
+        <div className="rounded-lg bg-emerald-50 text-emerald-800 text-sm px-4 py-2">
+          {embedMsg}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3">
         <form

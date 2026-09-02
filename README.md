@@ -1,32 +1,35 @@
 # Voxly — AI Customer Support SaaS
 
-> **Status:** Phase 6 — AI Foundation ✅
+> **Status:** Phase 7 — RAG & AI Assistant ✅
 
-Multi-tenant AI customer support platform: tickets, realtime chat, knowledge base, and OpenAI-assisted agent workflows.
+## RAG pipeline
 
-## AI (Phase 6)
+1. Publish knowledge articles (org-scoped).
+2. Click **Index for AI** on Knowledge page (or `POST /api/ai/knowledge/embed`).
+3. Embeddings stored on `KnowledgeArticle.embedding` (`text-embedding-3-small`).
+4. **Suggest reply** embeds the ticket query, ranks articles by cosine similarity, injects top hits into the LLM prompt.
+5. Agent sees suggestion + source links — **never auto-sent** to the customer.
 
-Requires `OPENAI_API_KEY` in `server/.env`.
+> Note: similarity ranking runs in-app over JSON vectors (no pgvector required to start). For large corpora, migrate to PostgreSQL `pgvector` with the same service interface.
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/ai/status` | Whether AI is configured |
-| `POST /api/ai/tickets/:ticketId/analyze` | Intent, category, priority, sentiment, summary |
-| `POST /api/ai/tickets/:ticketId/suggest-reply` | Draft reply for agent (not auto-sent) |
-| `POST /api/ai/tickets/:ticketId/summarize` | Short summary |
-| `GET /api/ai/usage` | Token/cost usage per org |
+## AI endpoints
 
-- Failures return `502 AI_REQUEST_FAILED` — support still works without AI.
-- Usage is stored in `AIUsage` (tokens + estimated cost).
-- Model default: `gpt-4o-mini`.
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/ai/status` | AI availability |
+| POST | `/api/ai/tickets/:id/analyze` | Intent / priority / sentiment |
+| POST | `/api/ai/tickets/:id/suggest-reply` | RAG-grounded draft |
+| GET | `/api/ai/knowledge/search?q=` | Semantic KB search |
+| POST | `/api/ai/knowledge/embed` | Batch embed published articles |
+| GET | `/api/ai/usage` | Token & cost summary |
 
 ## Setup
 
 ```bash
-cd server && cp ../.env.example .env
-# Set DATABASE_URL, JWT secrets, OPENAI_API_KEY
-npm install && npx prisma generate && npx prisma migrate dev && npm run dev
+# server/.env
+OPENAI_API_KEY=sk-...
 
+cd server && npm install && npx prisma generate && npx prisma migrate dev && npm run dev
 cd client && npm install && npm run dev
 ```
 
@@ -34,10 +37,10 @@ cd client && npm install && npm run dev
 
 | Phase | Status |
 |-------|--------|
-| 0–5 | ✅ |
-| 6 AI Foundation | ✅ |
-| 7 RAG & AI Assistant | Next |
-| 8–13 | Planned |
+| 0–6 | ✅ |
+| 7 RAG & AI Assistant | ✅ |
+| 8 Agent Workspace UX | Next |
+| 9–13 | Planned |
 
 ## License
 

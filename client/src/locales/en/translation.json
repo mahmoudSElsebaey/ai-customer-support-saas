@@ -94,13 +94,17 @@
     "title": "AI Assistant",
     "notConfigured": "AI is not configured. Set OPENAI_API_KEY on the server.",
     "analyze": "Analyze ticket",
-    "suggestReply": "Suggest reply",
+    "suggestReply": "Suggest reply (RAG)",
     "suggestion": "Suggested reply",
     "insert": "Insert into composer",
     "regenerate": "Regenerate",
     "dismiss": "Dismiss",
     "intent": "Intent",
     "category": "Category",
-    "error": "AI request failed. You can continue without AI."
+    "error": "AI request failed. You can continue without AI.",
+    "sources": "Knowledge sources",
+    "ragUsed": "Grounded in KB",
+    "embedArticles": "Index for AI",
+    "embedResult": "Indexed {{ok}} / {{total}} articles"
   }
 }
