@@ -1,5 +1,5 @@
 // Voxly — AI Customer Support SaaS
-// Phases 1–8
+// Phases 1–11
 
 generator client {
   provider = "prisma-client-js"
@@ -22,6 +22,14 @@ enum Plan {
   FREE
   PRO
   BUSINESS
+}
+
+enum PlanStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+  INCOMPLETE
 }
 
 enum TicketStatus {
@@ -54,13 +62,18 @@ enum ArticleStatus {
 }
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  logo      String?
-  plan      Plan     @default(FREE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String     @id @default(cuid())
+  name                 String
+  slug                 String     @unique
+  logo                 String?
+  plan                 Plan       @default(FREE)
+  planStatus           PlanStatus @default(ACTIVE)
+  stripeCustomerId     String?    @unique
+  stripeSubscriptionId String?    @unique
+  stripePriceId        String?
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
   users             User[]
   customers         Customer[]
@@ -85,12 +98,12 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  assignedTickets Ticket[]         @relation("AssignedAgent")
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedTickets Ticket[]           @relation("AssignedAgent")
   messages        Message[]
   refreshTokens   RefreshToken[]
   articles        KnowledgeArticle[] @relation("ArticleAuthor")
-  cannedResponses CannedResponse[] @relation("CannedAuthor")
+  cannedResponses CannedResponse[]   @relation("CannedAuthor")
 
   @@unique([email, organizationId])
   @@index([organizationId])
