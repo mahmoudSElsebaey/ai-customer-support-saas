@@ -1,56 +1,50 @@
 # Voxly — AI Customer Support SaaS
 
-> **Status:** Phase 10 — Production Hardening ✅
+> **Status:** Phase 11 — Billing (Stripe) ✅
 
-## Production hardening (Phase 10)
+## Billing (Stripe)
 
-| Area | Implementation |
-|------|----------------|
-| Rate limiting | Global + stricter auth + AI limits (`express-rate-limit`) |
-| Security headers | `helmet` (CSP in production) |
-| Body size | JSON limited to 1mb |
-| Compression | `compression` |
-| Request ID | `X-Request-Id` on every response |
-| Structured logs | `pino` + `pino-http` |
-| Trust proxy | Enabled in production |
-| Health | `GET /api/health` (liveness), `GET /api/health/ready` (DB) |
-| Graceful shutdown | SIGTERM/SIGINT, 15s force timeout |
-| Errors | No stack traces in production; `requestId` in payloads |
-| Docker | `Dockerfile` + `docker-compose.yml` (API + Postgres) |
+Plans: **FREE** · **PRO** ($49) · **BUSINESS** ($149) — catalog in `server/src/config/plans.ts`.
 
-### Health checks
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/billing/plans` | Public plan catalog |
+| `GET /api/billing/subscription` | Current org plan |
+| `POST /api/billing/checkout` | Stripe Checkout (`{ plan: "PRO" \| "BUSINESS" }`) — OWNER/ADMIN |
+| `POST /api/billing/portal` | Stripe Customer Portal |
+| `POST /api/billing/webhook` | Stripe webhooks (raw body) |
 
-```bash
-curl http://localhost:5000/api/health
-curl http://localhost:5000/api/health/ready
+### Env
+
+```env
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_PRO=price_...
+STRIPE_PRICE_BUSINESS=price_...
 ```
 
-### Docker
+### Local webhook testing
 
 ```bash
-# Set JWT secrets + optional OPENAI_API_KEY in environment
-docker compose up --build
+stripe listen --forward-to localhost:5000/api/billing/webhook
 ```
 
-### Local production-ish run
+After schema change:
 
 ```bash
-cd server
-npm install
-npx prisma generate
-npx prisma migrate deploy
-npm run build && npm start
+cd server && npx prisma migrate dev --name stripe_billing
 ```
+
+Without Stripe keys, the app still runs; Billing page shows “not configured”.
 
 ## Phases
 
 | Phase | Status |
 |-------|--------|
-| 0–9 | ✅ |
-| 10 Production Hardening | ✅ |
-| 11 Billing (Stripe) | Next |
-| 12 Customer portal | Planned |
-| 13 Observability / polish | Planned |
+| 0–10 | ✅ |
+| 11 Billing | ✅ |
+| 12 Customer portal | Next |
+| 13 Observability | Planned |
 
 ## License
 

@@ -15,7 +15,8 @@
     "tickets": "Tickets",
     "customers": "Customers",
     "knowledge": "Knowledge",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "billing": "Billing"
   },
   "auth": {
     "login": "Log in",
@@ -142,5 +143,20 @@
     "aiRequests": "AI requests",
     "aiTokens": "Tokens",
     "aiCost": "Est. cost"
+  },
+  "billing": {
+    "title": "Billing",
+    "subtitle": "Manage your organization plan",
+    "currentPlan": "Current plan",
+    "periodEnd": "Current period ends",
+    "manage": "Manage subscription",
+    "upgrade": "Upgrade",
+    "current": "Current plan",
+    "free": "Free",
+    "month": "mo",
+    "success": "Payment successful. Your plan will update shortly.",
+    "canceled": "Checkout canceled.",
+    "error": "Billing request failed.",
+    "notConfigured": "Stripe is not configured. Set STRIPE_SECRET_KEY and price IDs on the server."
   }
 }

@@ -15,7 +15,8 @@
     "tickets": "التذاكر",
     "customers": "العملاء",
     "knowledge": "قاعدة المعرفة",
-    "analytics": "التحليلات"
+    "analytics": "التحليلات",
+    "billing": "الفوترة"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -142,5 +143,20 @@
     "aiRequests": "طلبات AI",
     "aiTokens": "Tokens",
     "aiCost": "تكلفة تقديرية"
+  },
+  "billing": {
+    "title": "الفوترة",
+    "subtitle": "إدارة خطة منظمتك",
+    "currentPlan": "الخطة الحالية",
+    "periodEnd": "ينتهي الفترة الحالية",
+    "manage": "إدارة الاشتراك",
+    "upgrade": "ترقية",
+    "current": "الخطة الحالية",
+    "free": "مجاني",
+    "month": "شهر",
+    "success": "تم الدفع بنجاح. ستُحدَّث خطتك قريبًا.",
+    "canceled": "تم إلغاء عملية الدفع.",
+    "error": "فشل طلب الفوترة.",
+    "notConfigured": "Stripe غير مُعد. عيّن STRIPE_SECRET_KEY ومعرّفات الأسعار على الخادم."
   }
 }
