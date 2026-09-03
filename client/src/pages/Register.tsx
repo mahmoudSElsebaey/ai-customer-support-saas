@@ -24,7 +24,12 @@ export default function Register() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     try {
-      const { confirmPassword: _, ...payload } = data;
+      const payload = {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        organizationName: data.organizationName,
+      };
       await registerUser(payload).unwrap();
       navigate("/dashboard");
     } catch {

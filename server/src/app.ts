@@ -1,9 +1,10 @@
 import express from "express";
+import type { IncomingMessage } from "http";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import cookieParser from "cookie-parser";
-import pinoHttp from "pino-http";
+import { pinoHttp } from "pino-http";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { requestId } from "./middleware/requestId.js";
@@ -26,10 +27,11 @@ app.use(metricsMiddleware);
 app.use(
   pinoHttp({
     logger,
-    genReqId: (req) => (req as express.Request).requestId ?? "unknown",
+    genReqId: (req: IncomingMessage) =>
+      (req as express.Request).requestId ?? "unknown",
     autoLogging: env.NODE_ENV !== "test",
     serializers: {
-      req: (req) => ({
+      req: (req: express.Request) => ({
         id: req.id,
         method: req.method,
         url: req.url,

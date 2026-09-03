@@ -53,7 +53,7 @@ export const listTickets = asyncHandler(async (req: Request, res: Response) => {
 
 export const getTicket = asyncHandler(async (req: Request, res: Response) => {
   const ticket = await portalService.getTicket(
-    req.params.id,
+    String(req.params.id),
     req.user!.id,
     req.user!.organizationId
   );
@@ -71,7 +71,7 @@ export const createTicket = asyncHandler(async (req: Request, res: Response) => 
 
 export const addMessage = asyncHandler(async (req: Request, res: Response) => {
   const message = await portalService.addMessage(
-    req.params.id,
+    String(req.params.id),
     req.user!.id,
     req.user!.organizationId,
     req.body.content
@@ -94,7 +94,7 @@ export const listArticles = asyncHandler(async (req: Request, res: Response) => 
 
 export const getArticle = asyncHandler(async (req: Request, res: Response) => {
   const article = await portalService.getPublishedArticle(
-    req.params.id,
+    String(req.params.id),
     req.user!.organizationId
   );
   return successResponse(res, article);

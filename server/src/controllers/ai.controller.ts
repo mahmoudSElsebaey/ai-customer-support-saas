@@ -22,7 +22,7 @@ export const status = asyncHandler(async (_req: Request, res: Response) => {
 
 export const analyzeTicket = asyncHandler(async (req: Request, res: Response) => {
   const result = await aiService.analyzeTicket(
-    req.params.ticketId,
+    String(req.params.ticketId),
     req.user!.organizationId
   );
   return successResponse(res, result);
@@ -31,7 +31,7 @@ export const analyzeTicket = asyncHandler(async (req: Request, res: Response) =>
 export const suggestReply = asyncHandler(async (req: Request, res: Response) => {
   const useRag = req.body?.useRag !== false && req.query.useRag !== "false";
   const result = await aiService.suggestReply(
-    req.params.ticketId,
+    String(req.params.ticketId),
     req.user!.organizationId,
     { useRag }
   );
@@ -40,7 +40,7 @@ export const suggestReply = asyncHandler(async (req: Request, res: Response) => 
 
 export const summarizeTicket = asyncHandler(async (req: Request, res: Response) => {
   const result = await aiService.summarizeTicket(
-    req.params.ticketId,
+    String(req.params.ticketId),
     req.user!.organizationId
   );
   return successResponse(res, result);
@@ -81,7 +81,7 @@ export const embedArticles = asyncHandler(async (req: Request, res: Response) =>
 
 export const embedArticle = asyncHandler(async (req: Request, res: Response) => {
   const result = await embeddingService.embedArticle(
-    req.params.articleId,
+    String(req.params.articleId),
     req.user!.organizationId
   );
   return successResponse(res, result, "Article embedded");

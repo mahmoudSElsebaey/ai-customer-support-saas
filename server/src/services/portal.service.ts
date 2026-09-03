@@ -349,7 +349,7 @@ export class PortalService {
       });
     }
 
-    const result = serializeDoc(ticket.toObject() as Record<string, unknown>);
+    const result = serializeDoc(ticket.toObject() as unknown as Record<string, unknown>);
 
     try {
       emitToOrg(organizationId, "ticket:created", { ticket: result });

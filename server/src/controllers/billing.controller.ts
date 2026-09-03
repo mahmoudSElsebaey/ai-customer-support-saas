@@ -3,7 +3,7 @@ import { billingService } from "../services/billing.service.js";
 import { successResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
-import type { Plan } from "@prisma/client";
+import type { Plan } from "../types/enums.js";
 
 export const listPlans = asyncHandler(async (_req: Request, res: Response) => {
   return successResponse(res, {

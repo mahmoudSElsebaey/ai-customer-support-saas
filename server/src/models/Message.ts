@@ -1,6 +1,5 @@
 import { Schema, model, type Document, type Model, type Types } from "mongoose";
 import {
-  MessageType,
   MESSAGE_TYPE_VALUES,
   type MessageType as MessageTypeType,
 } from "../types/enums.js";
@@ -42,7 +41,7 @@ const messageSchema = new Schema<IMessageDocument>(
     collection: "messages",
     toJSON: {
       virtuals: true,
-      transform(_doc, ret) {
+      transform(_doc, ret: Record<string, unknown>) {
         ret.id = ret._id?.toString();
         delete ret._id;
         delete ret.__v;

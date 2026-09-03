@@ -11,7 +11,7 @@ export interface IAIUsage {
   createdAt: Date;
 }
 
-export interface IAIUsageDocument extends IAIUsage, Document {}
+export interface IAIUsageDocument extends Omit<Document, "model">, IAIUsage {}
 
 const aiUsageSchema = new Schema<IAIUsageDocument>(
   {
@@ -33,7 +33,7 @@ const aiUsageSchema = new Schema<IAIUsageDocument>(
     collection: "ai_usages",
     toJSON: {
       virtuals: true,
-      transform(_doc, ret) {
+      transform(_doc, ret: Record<string, unknown>) {
         ret.id = ret._id?.toString();
         delete ret._id;
         delete ret.__v;

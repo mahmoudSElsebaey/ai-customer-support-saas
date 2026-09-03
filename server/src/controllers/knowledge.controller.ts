@@ -28,7 +28,7 @@ export const listArticles = asyncHandler(async (req: Request, res: Response) => 
 export const getArticle = asyncHandler(async (req: Request, res: Response) => {
   const publishedOnly = req.user!.role === "CUSTOMER";
   const article = await knowledgeService.getById(
-    req.params.id,
+    String(req.params.id),
     req.user!.organizationId,
     publishedOnly
   );
@@ -46,7 +46,7 @@ export const createArticle = asyncHandler(async (req: Request, res: Response) =>
 
 export const updateArticle = asyncHandler(async (req: Request, res: Response) => {
   const article = await knowledgeService.update(
-    req.params.id,
+    String(req.params.id),
     req.user!.organizationId,
     req.body
   );
@@ -54,7 +54,7 @@ export const updateArticle = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const deleteArticle = asyncHandler(async (req: Request, res: Response) => {
-  await knowledgeService.remove(req.params.id, req.user!.organizationId);
+  await knowledgeService.remove(String(req.params.id), req.user!.organizationId);
   return successResponse(res, null, "Article deleted");
 });
 
