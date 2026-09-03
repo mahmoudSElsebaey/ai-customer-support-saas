@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /tickets
+Disallow: /customers
+Disallow: /knowledge
+Disallow: /analytics
+Disallow: /billing
+Disallow: /portal/
+
+# Public marketing pages only by default
+Sitemap: /sitemap.xml
