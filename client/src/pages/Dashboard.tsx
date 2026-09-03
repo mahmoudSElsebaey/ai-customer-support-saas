@@ -7,6 +7,7 @@ import {
 } from "@/features/tickets/ticketsApi";
 import { useGetCustomersQuery } from "@/features/customers/customersApi";
 import { StatusBadge } from "@/components/StatusBadge";
+import { DocumentTitle } from "@/components/DocumentTitle";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -24,6 +25,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      <DocumentTitle title={t("nav.dashboard")} />
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
