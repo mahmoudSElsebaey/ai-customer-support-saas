@@ -95,12 +95,17 @@ export default function TicketsList() {
         </Link>
       </div>
 
-      {/* Queue tabs */}
-      <div className="flex flex-wrap gap-2">
+      <div
+        className="flex flex-wrap gap-2"
+        role="tablist"
+        aria-label={t("workspace.title")}
+      >
         {views.map((v) => (
           <button
             key={v.key}
             type="button"
+            role="tab"
+            aria-selected={view === v.key}
             onClick={() => {
               setView(v.key);
               setPage(1);
@@ -129,7 +134,6 @@ export default function TicketsList() {
         ))}
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <form
           onSubmit={(e) => {
@@ -138,8 +142,13 @@ export default function TicketsList() {
             setPage(1);
           }}
           className="flex gap-2"
+          role="search"
         >
+          <label htmlFor="ticket-search" className="sr-only">
+            {t("common.search")}
+          </label>
           <input
+            id="ticket-search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder={t("common.search")}
@@ -154,47 +163,59 @@ export default function TicketsList() {
         </form>
 
         {view !== "open" && view !== "urgent" && (
-          <select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
-          >
-            <option value="">{t("tickets.allStatuses")}</option>
-            {["OPEN", "PENDING", "IN_PROGRESS", "RESOLVED", "CLOSED"].map(
-              (s) => (
-                <option key={s} value={s}>
-                  {s.replace(/_/g, " ")}
-                </option>
-              )
-            )}
-          </select>
+          <>
+            <label htmlFor="ticket-status" className="sr-only">
+              {t("tickets.status")}
+            </label>
+            <select
+              id="ticket-status"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
+            >
+              <option value="">{t("tickets.allStatuses")}</option>
+              {["OPEN", "PENDING", "IN_PROGRESS", "RESOLVED", "CLOSED"].map(
+                (s) => (
+                  <option key={s} value={s}>
+                    {s.replace(/_/g, " ")}
+                  </option>
+                )
+              )}
+            </select>
+          </>
         )}
 
         {view !== "urgent" && (
-          <select
-            value={priority}
-            onChange={(e) => {
-              setPriority(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
-          >
-            <option value="">{t("tickets.allPriorities")}</option>
-            {["LOW", "MEDIUM", "HIGH", "URGENT"].map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
+          <>
+            <label htmlFor="ticket-priority" className="sr-only">
+              {t("tickets.priority")}
+            </label>
+            <select
+              id="ticket-priority"
+              value={priority}
+              onChange={(e) => {
+                setPriority(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
+            >
+              <option value="">{t("tickets.allPriorities")}</option>
+              {["LOW", "MEDIUM", "HIGH", "URGENT"].map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </>
         )}
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         {isLoading ? (
-          <div className="p-10 text-center text-slate-500">
+          <div className="p-10 text-center text-slate-500" role="status">
             {t("common.loading")}
           </div>
         ) : tickets.length === 0 ? (
@@ -204,24 +225,25 @@ export default function TicketsList() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              <caption className="sr-only">{t("workspace.title")}</caption>
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wide">
                 <tr>
-                  <th className="text-start px-4 py-3 font-medium">
+                  <th scope="col" className="text-start px-4 py-3 font-medium">
                     {t("tickets.subject")}
                   </th>
-                  <th className="text-start px-4 py-3 font-medium">
+                  <th scope="col" className="text-start px-4 py-3 font-medium">
                     {t("tickets.customer")}
                   </th>
-                  <th className="text-start px-4 py-3 font-medium">
+                  <th scope="col" className="text-start px-4 py-3 font-medium">
                     {t("tickets.status")}
                   </th>
-                  <th className="text-start px-4 py-3 font-medium">
+                  <th scope="col" className="text-start px-4 py-3 font-medium">
                     {t("tickets.priority")}
                   </th>
-                  <th className="text-start px-4 py-3 font-medium">
+                  <th scope="col" className="text-start px-4 py-3 font-medium">
                     {t("tickets.agent")}
                   </th>
-                  <th className="text-start px-4 py-3 font-medium">
+                  <th scope="col" className="text-start px-4 py-3 font-medium">
                     {t("tickets.updated")}
                   </th>
                 </tr>
@@ -277,16 +299,18 @@ export default function TicketsList() {
         {pagination && pagination.totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
             <button
+              type="button"
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
               className="text-sm text-slate-600 disabled:opacity-40"
             >
               {t("common.back")}
             </button>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-500" aria-live="polite">
               {page} / {pagination.totalPages}
             </span>
             <button
+              type="button"
               disabled={page >= pagination.totalPages}
               onClick={() => setPage((p) => p + 1)}
               className="text-sm text-slate-600 disabled:opacity-40"
