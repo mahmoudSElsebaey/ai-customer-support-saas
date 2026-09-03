@@ -23,6 +23,7 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ value, className }: StatusBadgeProps) {
+  const label = value.replace(/_/g, " ");
   return (
     <span
       className={cn(
@@ -30,8 +31,9 @@ export function StatusBadge({ value, className }: StatusBadgeProps) {
         statusStyles[value] ?? "bg-slate-50 text-slate-600 border-slate-200",
         className
       )}
+      aria-label={label}
     >
-      {value.replace(/_/g, " ")}
+      {label}
     </span>
   );
 }
