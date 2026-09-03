@@ -207,9 +207,8 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string) {
-    let payload;
     try {
-      payload = verifyRefreshToken(refreshToken);
+      verifyRefreshToken(refreshToken);
     } catch {
       throw new AppError("Invalid or expired refresh token", 401, "INVALID_REFRESH_TOKEN");
     }

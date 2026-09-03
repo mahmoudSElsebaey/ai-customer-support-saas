@@ -23,7 +23,7 @@ export const createCanned = asyncHandler(async (req: Request, res: Response) => 
 
 export const updateCanned = asyncHandler(async (req: Request, res: Response) => {
   const item = await cannedService.update(
-    req.params.id,
+    String(req.params.id),
     req.user!.organizationId,
     req.body
   );
@@ -31,6 +31,6 @@ export const updateCanned = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const deleteCanned = asyncHandler(async (req: Request, res: Response) => {
-  await cannedService.remove(req.params.id, req.user!.organizationId);
+  await cannedService.remove(String(req.params.id), req.user!.organizationId);
   return successResponse(res, null, "Deleted");
 });

@@ -230,7 +230,7 @@ ${conversation || "(no messages yet)"}`;
           id: h.id,
           title: h.title,
           score: Number(h.score.toFixed(4)),
-          category: h.category,
+          category: h.category ?? null,
         }));
 
         if (hits.length > 0) {

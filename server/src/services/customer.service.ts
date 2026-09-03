@@ -127,7 +127,7 @@ export class CustomerService {
       status: input.status ?? "active",
     });
 
-    return serializeDoc(customer.toObject() as Record<string, unknown>);
+    return serializeDoc(customer.toObject() as unknown as Record<string, unknown>);
   }
 
   async update(id: string, organizationId: string, input: UpdateCustomerInput) {
@@ -167,7 +167,7 @@ export class CustomerService {
     if (input.status !== undefined) customer.status = input.status;
 
     await customer.save();
-    return serializeDoc(customer.toObject() as Record<string, unknown>);
+    return serializeDoc(customer.toObject() as unknown as Record<string, unknown>);
   }
 
   async remove(id: string, organizationId: string) {
