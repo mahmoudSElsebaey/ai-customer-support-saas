@@ -65,7 +65,7 @@ export class CannedService {
       isActive: input.isActive ?? true,
     });
 
-    return serializeDoc(created.toObject() as Record<string, unknown>);
+    return serializeDoc(created.toObject() as unknown as Record<string, unknown>);
   }
 
   async update(id: string, organizationId: string, input: UpdateCannedInput) {
@@ -88,7 +88,7 @@ export class CannedService {
     if (input.isActive !== undefined) existing.isActive = input.isActive;
 
     await existing.save();
-    return serializeDoc(existing.toObject() as Record<string, unknown>);
+    return serializeDoc(existing.toObject() as unknown as Record<string, unknown>);
   }
 
   async remove(id: string, organizationId: string) {

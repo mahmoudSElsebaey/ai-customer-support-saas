@@ -2,6 +2,7 @@ import type { Socket } from "socket.io";
 import { parse as parseCookie } from "cookie";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { logger } from "../lib/logger.js";
+import { env } from "../config/env.js";
 import type { SocketData } from "./types.js";
 
 /**
@@ -12,6 +13,11 @@ export function socketAuth(
   next: (err?: Error) => void
 ): void {
   try {
+    const origin = socket.handshake.headers.origin;
+    if (origin && origin !== env.CLIENT_URL) {
+      return next(new Error("Untrusted request origin"));
+    }
+
     const cookieHeader = socket.handshake.headers.cookie;
     let token: string | undefined;
 

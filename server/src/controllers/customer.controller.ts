@@ -22,7 +22,7 @@ export const listCustomers = asyncHandler(async (req: Request, res: Response) =>
 
 export const getCustomer = asyncHandler(async (req: Request, res: Response) => {
   const customer = await customerService.getById(
-    req.params.id,
+    String(req.params.id),
     req.user!.organizationId
   );
   return successResponse(res, customer);
@@ -38,7 +38,7 @@ export const createCustomer = asyncHandler(async (req: Request, res: Response) =
 
 export const updateCustomer = asyncHandler(async (req: Request, res: Response) => {
   const customer = await customerService.update(
-    req.params.id,
+    String(req.params.id),
     req.user!.organizationId,
     req.body
   );
@@ -46,6 +46,6 @@ export const updateCustomer = asyncHandler(async (req: Request, res: Response) =
 });
 
 export const deleteCustomer = asyncHandler(async (req: Request, res: Response) => {
-  await customerService.remove(req.params.id, req.user!.organizationId);
+  await customerService.remove(String(req.params.id), req.user!.organizationId);
   return successResponse(res, null, "Customer deleted");
 });

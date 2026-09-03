@@ -141,7 +141,14 @@ function App() {
 
       <Route path="/portal/:slug/login" element={<PortalLogin />} />
       <Route path="/portal/:slug/register" element={<PortalRegister />} />
-      <Route path="/portal/:slug" element={<PortalLayout />}>
+      <Route
+        path="/portal/:slug"
+        element={
+          <ProtectedRoute roles={["CUSTOMER"]} redirectTo="/login">
+            <PortalLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<PortalTickets />} />
         <Route path="new" element={<PortalNewTicket />} />
         <Route path="tickets/:id" element={<PortalTicketDetail />} />
@@ -151,7 +158,7 @@ function App() {
 
       <Route
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["OWNER", "ADMIN", "MANAGER", "AGENT"]}>
             <DashboardLayout />
           </ProtectedRoute>
         }

@@ -40,7 +40,7 @@ export const listTickets = asyncHandler(async (req: Request, res: Response) => {
 
 export const getTicket = asyncHandler(async (req: Request, res: Response) => {
   const ticket = await ticketService.getById(
-    req.params.id,
+    String(req.params.id),
     req.user!.organizationId,
     req.user!.role,
     req.user!.id
@@ -59,7 +59,7 @@ export const createTicket = asyncHandler(async (req: Request, res: Response) => 
 
 export const updateTicket = asyncHandler(async (req: Request, res: Response) => {
   const ticket = await ticketService.update(
-    req.params.id,
+    String(req.params.id),
     req.user!.organizationId,
     req.body,
     req.user!.id
@@ -69,7 +69,7 @@ export const updateTicket = asyncHandler(async (req: Request, res: Response) => 
 
 export const addMessage = asyncHandler(async (req: Request, res: Response) => {
   const message = await ticketService.addMessage(
-    req.params.id,
+    String(req.params.id),
     req.user!.organizationId,
     req.user!.id,
     req.body,
@@ -80,7 +80,7 @@ export const addMessage = asyncHandler(async (req: Request, res: Response) => {
 
 export const listMessages = asyncHandler(async (req: Request, res: Response) => {
   const messages = await ticketService.listMessages(
-    req.params.id,
+    String(req.params.id),
     req.user!.organizationId
   );
   return successResponse(res, messages);

@@ -12,6 +12,7 @@ import { signAccessToken, signRefreshToken } from "../utils/jwt.js";
 import { emitToOrg, emitToTicket } from "../socket/index.js";
 import { serializeDoc, toId } from "../utils/serialize.js";
 import { Role, TicketStatus, MessageType, ArticleStatus } from "../types/enums.js";
+import { hashRefreshToken } from "../utils/refreshToken.js";
 import type {
   PortalRegisterInput,
   PortalLoginInput,
@@ -162,7 +163,7 @@ export class PortalService {
       userId: new mongoose.Types.ObjectId(user.id),
     });
     await RefreshToken.create({
-      token: refreshToken,
+      tokenHash: hashRefreshToken(refreshToken),
       userId: new mongoose.Types.ObjectId(user.id),
       expiresAt,
     });
@@ -349,7 +350,7 @@ export class PortalService {
       });
     }
 
-    const result = serializeDoc(ticket.toObject() as Record<string, unknown>);
+    const result = serializeDoc(ticket.toObject() as unknown as Record<string, unknown>);
 
     try {
       emitToOrg(organizationId, "ticket:created", { ticket: result });

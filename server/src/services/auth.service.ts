@@ -13,6 +13,7 @@ import { generateSlug } from "../utils/slug.js";
 import { toId } from "../utils/serialize.js";
 import type { RegisterInput, LoginInput } from "../validations/auth.validation.js";
 import { Role, type Role as RoleType } from "../types/enums.js";
+import { hashRefreshToken } from "../utils/refreshToken.js";
 
 const SALT_ROUNDS = 12;
 
@@ -117,7 +118,7 @@ export class AuthService {
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     await RefreshToken.create({
-      token: refreshToken,
+      tokenHash: hashRefreshToken(refreshToken),
       userId: user._id,
       expiresAt,
     });
@@ -181,7 +182,7 @@ export class AuthService {
 
     await RefreshToken.deleteMany({ userId: user._id });
     await RefreshToken.create({
-      token: refreshToken,
+      tokenHash: hashRefreshToken(refreshToken),
       userId: user._id,
       expiresAt,
     });
@@ -207,14 +208,14 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string) {
-    let payload;
     try {
-      payload = verifyRefreshToken(refreshToken);
+      verifyRefreshToken(refreshToken);
     } catch {
       throw new AppError("Invalid or expired refresh token", 401, "INVALID_REFRESH_TOKEN");
     }
 
-    const stored = await RefreshToken.findOne({ token: refreshToken }).exec();
+    const tokenHash = hashRefreshToken(refreshToken);
+    const stored = await RefreshToken.findOne({ tokenHash }).exec();
     if (!stored || stored.expiresAt < new Date()) {
       if (stored) {
         await RefreshToken.deleteOne({ _id: stored._id });
@@ -262,7 +263,7 @@ export class AuthService {
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     await RefreshToken.create({
-      token: newRefreshToken,
+      tokenHash: hashRefreshToken(newRefreshToken),
       userId: user._id,
       expiresAt,
     });
@@ -289,7 +290,7 @@ export class AuthService {
 
   async logout(refreshToken?: string) {
     if (refreshToken) {
-      await RefreshToken.deleteMany({ token: refreshToken });
+      await RefreshToken.deleteMany({ tokenHash: hashRefreshToken(refreshToken) });
     }
   }
 

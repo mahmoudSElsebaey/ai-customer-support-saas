@@ -5,9 +5,10 @@ import type { ReactNode } from "react";
 interface ProtectedRouteProps {
   children: ReactNode;
   roles?: Array<"OWNER" | "ADMIN" | "MANAGER" | "AGENT" | "CUSTOMER">;
+  redirectTo?: string;
 }
 
-export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, roles, redirectTo = "/login" }: ProtectedRouteProps) {
   const { data, isLoading, isError } = useMeQuery();
 
   if (isLoading) {
@@ -19,7 +20,7 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
   }
 
   if (isError || !data?.data) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={redirectTo} replace />;
   }
 
   if (roles && !roles.includes(data.data.role)) {

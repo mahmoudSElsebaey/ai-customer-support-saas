@@ -36,8 +36,11 @@ async function seed() {
   const existingOrg = await Organization.findOne({ slug: "demo" });
   if (existingOrg) {
     const orgId = existingOrg._id;
+    const demoTicketIds = await Ticket.find({ organizationId: orgId })
+      .select("_id")
+      .lean();
     await Promise.all([
-      Message.deleteMany({}),
+      Message.deleteMany({ ticketId: { $in: demoTicketIds.map((ticket) => ticket._id) } }),
       Ticket.deleteMany({ organizationId: orgId }),
       Customer.deleteMany({ organizationId: orgId }),
       KnowledgeArticle.deleteMany({ organizationId: orgId }),

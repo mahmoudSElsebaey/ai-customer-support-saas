@@ -26,6 +26,31 @@ let io: Server<
   SocketData
 > | null = null;
 
+async function canAccessTicket(
+  user: SocketData["user"],
+  ticketId: string
+): Promise<boolean> {
+  if (
+    !mongoose.Types.ObjectId.isValid(ticketId) ||
+    !mongoose.Types.ObjectId.isValid(user.organizationId) ||
+    user.role === "CUSTOMER"
+  ) {
+    return false;
+  }
+
+  const ticket = await Ticket.findOne({
+    _id: ticketId,
+    organizationId: user.organizationId,
+  })
+    .select("assignedAgentId")
+    .lean();
+
+  if (!ticket) return false;
+
+  const assignedId = ticket.assignedAgentId?.toString() ?? null;
+  return !(user.role === "AGENT" && assignedId && assignedId !== user.id);
+}
+
 export function getIO() {
   if (!io) {
     throw new Error("Socket.IO not initialized");
@@ -77,26 +102,7 @@ export function initSocket(httpServer: HttpServer) {
 
     socket.on("ticket:join", async (ticketId) => {
       try {
-        if (!mongoose.Types.ObjectId.isValid(ticketId)) return;
-        if (!mongoose.Types.ObjectId.isValid(user.organizationId)) return;
-
-        const ticket = await Ticket.findOne({
-          _id: ticketId,
-          organizationId: user.organizationId,
-        })
-          .select("assignedAgentId")
-          .lean();
-
-        if (!ticket) return;
-
-        const assignedId = ticket.assignedAgentId?.toString() ?? null;
-        if (
-          user.role === "AGENT" &&
-          assignedId &&
-          assignedId !== user.id
-        ) {
-          return;
-        }
+        if (!(await canAccessTicket(user, ticketId))) return;
 
         socket.join(`ticket:${ticketId}`);
         logger.debug({ ticketId, userId: user.id }, "Joined ticket room");
@@ -110,6 +116,7 @@ export function initSocket(httpServer: HttpServer) {
     });
 
     socket.on("typing:start", ({ ticketId }) => {
+      if (!socket.rooms.has(`ticket:${ticketId}`)) return;
       socket.to(`ticket:${ticketId}`).emit("typing:start", {
         ticketId,
         userId: user.id,
@@ -118,6 +125,7 @@ export function initSocket(httpServer: HttpServer) {
     });
 
     socket.on("typing:stop", ({ ticketId }) => {
+      if (!socket.rooms.has(`ticket:${ticketId}`)) return;
       socket.to(`ticket:${ticketId}`).emit("typing:stop", {
         ticketId,
         userId: user.id,
@@ -126,22 +134,10 @@ export function initSocket(httpServer: HttpServer) {
 
     socket.on("message:read", async ({ ticketId, messageId }) => {
       try {
-        if (
-          !mongoose.Types.ObjectId.isValid(ticketId) ||
-          !mongoose.Types.ObjectId.isValid(messageId) ||
-          !mongoose.Types.ObjectId.isValid(user.organizationId)
-        ) {
+        if (!mongoose.Types.ObjectId.isValid(messageId)) {
           return;
         }
-
-        const ticket = await Ticket.findOne({
-          _id: ticketId,
-          organizationId: user.organizationId,
-        })
-          .select("_id")
-          .lean();
-
-        if (!ticket) return;
+        if (!(await canAccessTicket(user, ticketId))) return;
 
         const message = await Message.findOne({
           _id: messageId,

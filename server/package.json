@@ -8,7 +8,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "tsx src/scripts/seed.ts",
-    "lint": "eslint src --ext .ts"
+    "lint": "tsc --noEmit",
+    "test": "npm run build && node --test"
   },
   "dependencies": {
     "@sentry/node": "^9.5.0",

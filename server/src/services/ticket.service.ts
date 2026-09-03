@@ -242,7 +242,7 @@ export class TicketService {
       base.senderId =
         m.senderId && typeof m.senderId === "object" && "_id" in m.senderId
           ? toId((m.senderId as { _id: mongoose.Types.ObjectId })._id)
-          : toId(m.senderId as mongoose.Types.ObjectId);
+          : toId(m.senderId);
       base.sender = mapUserRef(m.senderId);
       return base;
     });
@@ -538,7 +538,7 @@ export class TicketService {
       base.senderId =
         m.senderId && typeof m.senderId === "object" && "_id" in m.senderId
           ? toId((m.senderId as { _id: mongoose.Types.ObjectId })._id)
-          : toId(m.senderId as mongoose.Types.ObjectId);
+          : toId(m.senderId);
       base.sender = mapUserRef(m.senderId);
       return base;
     });

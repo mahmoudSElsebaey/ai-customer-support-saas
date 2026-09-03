@@ -56,7 +56,7 @@ const knowledgeArticleSchema = new Schema<IKnowledgeArticleDocument>(
     collection: "knowledge_articles",
     toJSON: {
       virtuals: true,
-      transform(_doc, ret) {
+      transform(_doc, ret: Record<string, unknown>) {
         ret.id = ret._id?.toString();
         delete ret._id;
         delete ret.__v;
