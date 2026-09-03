@@ -41,7 +41,10 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-10">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-white font-bold text-xl mb-4">
+          <div
+            className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-white font-bold text-xl mb-4"
+            aria-hidden="true"
+          >
             V
           </div>
           <h1 className="text-2xl font-bold text-slate-900">{t("auth.register")}</h1>
@@ -51,19 +54,30 @@ export default function Register() {
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4"
+          noValidate
         >
           {apiError && (
-            <div className="rounded-lg bg-red-50 text-red-700 text-sm px-4 py-3">
+            <div
+              role="alert"
+              className="rounded-lg bg-red-50 text-red-700 text-sm px-4 py-3"
+            >
               {apiError}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label
+              htmlFor="reg-name"
+              className="block text-sm font-medium text-slate-700 mb-1.5"
+            >
               {t("auth.name")}
             </label>
             <input
+              id="reg-name"
               type="text"
+              autoComplete="name"
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={errors.name ? "reg-name-error" : undefined}
               className={cn(
                 "w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
                 errors.name ? "border-red-400" : "border-slate-300"
@@ -71,16 +85,27 @@ export default function Register() {
               {...register("name")}
             />
             {errors.name && (
-              <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>
+              <p id="reg-name-error" className="mt-1 text-xs text-red-600" role="alert">
+                {errors.name.message}
+              </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label
+              htmlFor="reg-org"
+              className="block text-sm font-medium text-slate-700 mb-1.5"
+            >
               {t("auth.organizationName")}
             </label>
             <input
+              id="reg-org"
               type="text"
+              autoComplete="organization"
+              aria-invalid={Boolean(errors.organizationName)}
+              aria-describedby={
+                errors.organizationName ? "reg-org-error" : undefined
+              }
               className={cn(
                 "w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
                 errors.organizationName ? "border-red-400" : "border-slate-300"
@@ -88,19 +113,25 @@ export default function Register() {
               {...register("organizationName")}
             />
             {errors.organizationName && (
-              <p className="mt-1 text-xs text-red-600">
+              <p id="reg-org-error" className="mt-1 text-xs text-red-600" role="alert">
                 {errors.organizationName.message}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label
+              htmlFor="reg-email"
+              className="block text-sm font-medium text-slate-700 mb-1.5"
+            >
               {t("auth.email")}
             </label>
             <input
+              id="reg-email"
               type="email"
               autoComplete="email"
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? "reg-email-error" : undefined}
               className={cn(
                 "w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
                 errors.email ? "border-red-400" : "border-slate-300"
@@ -108,17 +139,27 @@ export default function Register() {
               {...register("email")}
             />
             {errors.email && (
-              <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+              <p id="reg-email-error" className="mt-1 text-xs text-red-600" role="alert">
+                {errors.email.message}
+              </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label
+              htmlFor="reg-password"
+              className="block text-sm font-medium text-slate-700 mb-1.5"
+            >
               {t("auth.password")}
             </label>
             <input
+              id="reg-password"
               type="password"
               autoComplete="new-password"
+              aria-invalid={Boolean(errors.password)}
+              aria-describedby={
+                errors.password ? "reg-password-error" : undefined
+              }
               className={cn(
                 "w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
                 errors.password ? "border-red-400" : "border-slate-300"
@@ -126,17 +167,31 @@ export default function Register() {
               {...register("password")}
             />
             {errors.password && (
-              <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
+              <p
+                id="reg-password-error"
+                className="mt-1 text-xs text-red-600"
+                role="alert"
+              >
+                {errors.password.message}
+              </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label
+              htmlFor="reg-confirm"
+              className="block text-sm font-medium text-slate-700 mb-1.5"
+            >
               {t("auth.confirmPassword")}
             </label>
             <input
+              id="reg-confirm"
               type="password"
               autoComplete="new-password"
+              aria-invalid={Boolean(errors.confirmPassword)}
+              aria-describedby={
+                errors.confirmPassword ? "reg-confirm-error" : undefined
+              }
               className={cn(
                 "w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
                 errors.confirmPassword ? "border-red-400" : "border-slate-300"
@@ -144,7 +199,11 @@ export default function Register() {
               {...register("confirmPassword")}
             />
             {errors.confirmPassword && (
-              <p className="mt-1 text-xs text-red-600">
+              <p
+                id="reg-confirm-error"
+                className="mt-1 text-xs text-red-600"
+                role="alert"
+              >
                 {errors.confirmPassword.message}
               </p>
             )}
@@ -153,6 +212,7 @@ export default function Register() {
           <button
             type="submit"
             disabled={isLoading}
+            aria-busy={isLoading}
             className="w-full rounded-lg bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white font-medium py-2.5 text-sm transition mt-2"
           >
             {isLoading ? t("common.loading") : t("auth.register")}
