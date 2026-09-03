@@ -30,7 +30,6 @@ body {
   min-height: 100vh;
 }
 
-/* Visible keyboard focus without fighting mouse clicks */
 :focus-visible {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
@@ -44,7 +43,6 @@ select:focus:not(:focus-visible) {
   outline: none;
 }
 
-/* Skip to main content (accessibility) */
 .skip-link {
   position: absolute;
   left: 0.75rem;
@@ -77,6 +75,34 @@ select:focus:not(:focus-visible) {
   }
 }
 
-.dark body {
+/* Dark mode: activate with class "dark" on <html> */
+html.dark body {
   @apply bg-slate-950 text-slate-100;
+}
+
+html.dark .bg-white {
+  background-color: rgb(15 23 42) !important;
+}
+
+html.dark .bg-slate-50 {
+  background-color: rgb(2 6 23) !important;
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-100 {
+  border-color: rgb(30 41 59) !important;
+}
+
+html.dark .text-slate-900 {
+  color: rgb(241 245 249) !important;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+  color: rgb(203 213 225) !important;
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+  color: rgb(148 163 184) !important;
 }
