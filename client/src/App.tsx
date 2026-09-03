@@ -26,14 +26,13 @@ import PortalKnowledge from "./pages/portal/PortalKnowledge";
 import PortalArticle from "./pages/portal/PortalArticle";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { SkipLink } from "./components/SkipLink";
-import { DocumentTitle } from "./components/DocumentTitle";
+import { usePageTitle } from "./hooks/usePageTitle";
 
 function Landing() {
   const { t, i18n } = useTranslation();
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <DocumentTitle title="" />
       <SkipLink />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
@@ -127,6 +126,7 @@ function Landing() {
 
 function App() {
   const { i18n } = useTranslation();
+  usePageTitle();
 
   useEffect(() => {
     document.documentElement.dir = i18n.language === "ar" ? "rtl" : "ltr";
