@@ -10,6 +10,18 @@
     "search": "Search",
     "back": "Back"
   },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "toggleMenu": "Toggle menu",
+    "mainNav": "Main navigation"
+  },
+  "landing": {
+    "heroTitle": "Support that scales with your customers",
+    "heroBody": "Tickets, live chat, knowledge base, and AI-assisted replies in one multi-tenant workspace.",
+    "featureTickets": "Unified ticket inbox",
+    "featureKb": "Knowledge base & RAG",
+    "featureAnalytics": "Real-time analytics"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
