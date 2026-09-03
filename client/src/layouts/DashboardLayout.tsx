@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useMeQuery, useLogoutMutation } from "@/features/auth/authApi";
 import { useSocket } from "@/hooks/useSocket";
+import { useTheme } from "@/hooks/useTheme";
 import { SkipLink } from "@/components/SkipLink";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ export default function DashboardLayout() {
   const { data } = useMeQuery();
   const [logout] = useLogoutMutation();
   const { connected, onlineUserIds } = useSocket();
+  const { mode, cycle } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const user = data?.data;
@@ -38,6 +40,9 @@ export default function DashboardLayout() {
     path === "/dashboard"
       ? location.pathname === "/dashboard"
       : location.pathname.startsWith(path);
+
+  const themeLabel =
+    mode === "dark" ? "Dark" : mode === "light" ? "Light" : "System";
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -120,7 +125,7 @@ export default function DashboardLayout() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <span
               className={cn(
                 "hidden sm:inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full border",
@@ -141,6 +146,16 @@ export default function DashboardLayout() {
               />
               {connected ? `${onlineUserIds.length} online` : "Offline"}
             </span>
+
+            <button
+              type="button"
+              onClick={cycle}
+              className="text-xs text-slate-500 hover:text-primary-600 rounded px-1.5 py-1"
+              aria-label={`Theme: ${themeLabel}. Click to change.`}
+              title={`Theme: ${themeLabel}`}
+            >
+              {mode === "dark" ? "🌙" : mode === "light" ? "☀️" : "💻"}
+            </button>
 
             <button
               type="button"
