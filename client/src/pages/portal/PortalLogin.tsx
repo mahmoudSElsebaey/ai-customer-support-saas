@@ -17,12 +17,12 @@ type FormValues = z.infer<typeof schema>;
 
 export default function PortalLogin() {
   const { slug = "" } = useParams<{ slug: string }>();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { data: orgData } = useResolvePortalOrgQuery(slug, { skip: !slug });
   const [login, { isLoading, error }] = usePortalLoginMutation();
 
-  const { register, handleSubmit } = useForm<FormValues>({
+  const { register, handleSubmit, setValue } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
 
@@ -59,6 +59,33 @@ export default function PortalLogin() {
             {apiError}
           </div>
         )}
+
+        <div className="rounded-lg border border-primary-100 bg-primary-50/60 p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">
+                {t("auth.demoAccounts", "Try a demo account")}
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {i18n.language === "ar" ? "حساب عميل تجريبي" : "Demo customer account"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setValue("email", "customer@demo.voxly.app", { shouldValidate: true });
+                setValue("password", "Demo1234!", { shouldValidate: true });
+              }}
+              className="rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white hover:bg-primary-700 transition"
+            >
+              {i18n.language === "ar" ? "استخدام الحساب" : "Use account"}
+            </button>
+          </div>
+          <p className="text-xs text-slate-600">customer@demo.voxly.app</p>
+          <p className="text-xs text-slate-500">
+            {i18n.language === "ar" ? "كلمة المرور:" : "Password:"} <span className="font-semibold text-slate-700">Demo1234!</span>
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <input
