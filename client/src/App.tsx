@@ -2,6 +2,8 @@ import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
 import Login from "./pages/Login";
+import LandingPage from "./pages/LandingPage";
+import "./styles/landing.css";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import TicketsList from "./pages/TicketsList";
@@ -135,7 +137,7 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
