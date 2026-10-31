@@ -55,7 +55,7 @@ The public homepage includes a live Voxly AI chat at the bottom corner. To enabl
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-The key stays server-side. The public demo endpoint is rate-limited to 12 messages per IP per 10 minutes. The demo assistant explains Voxly and does not access customer workspaces or create real tickets.
+The key stays server-side. The public demo endpoint is rate-limited to 12 messages per IP per 10 minutes. The demo assistant explains Voxly and does not access customer workspaces or create real tickets. If the frontend and API are hosted on different domains, set `VITE_API_URL` in the client environment to the API origin (for example, `https://api.example.com`) and allow the frontend origin in the server's `CLIENT_URL`.
 
 ## API health
 
