@@ -24,7 +24,7 @@ export default function DemoChatWidget() {
     setInput("");
     setBusy(true);
     try {
-      const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\\/$/, "");
+      const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
       const response = await fetch(`${apiBase}/api/public-demo/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
