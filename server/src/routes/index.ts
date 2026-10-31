@@ -9,10 +9,12 @@ import cannedRoutes from "./canned.routes.js";
 import analyticsRoutes from "./analytics.routes.js";
 import billingRoutes from "./billing.routes.js";
 import portalRoutes from "./portal.routes.js";
+import publicDemoRoutes from "./public-demo.routes.js";
 
 const router = Router();
 
 router.use("/health", healthRoutes);
+router.use("/public-demo", publicDemoRoutes);
 router.use("/auth", authRoutes);
 router.use("/customers", customerRoutes);
 router.use("/tickets", ticketRoutes);
