@@ -1,4 +1,5 @@
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { Bot, MessageCircle, Send, X, Sparkles, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
