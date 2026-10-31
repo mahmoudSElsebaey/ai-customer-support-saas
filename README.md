@@ -23,7 +23,7 @@ Multi-tenant helpdesk with live chat, knowledge base, RAG-assisted AI replies, a
 ```bash
 # 1) Environment
 cp .env.example server/.env
-# Edit server/.env — set MONGODB_URI and JWT secrets
+# Edit server/.env — set MONGODB_URI, JWT secrets, and OPENAI_API_KEY to enable the live homepage AI demo
 
 # 2) Server
 cd server
@@ -46,6 +46,16 @@ npm run dev     # http://localhost:5173
 | Portal customer | customer@demo.voxly.app | Demo1234! |
 
 Organization slug: `demo` — portal at `/portal/demo`.
+
+### Live AI homepage demo
+
+The public homepage includes a live Voxly AI chat at the bottom corner. To enable real replies, add your OpenAI API key to `server/.env`:
+
+```env
+OPENAI_API_KEY=your_openai_api_key
+```
+
+The key stays server-side. The public demo endpoint is rate-limited to 12 messages per IP per 10 minutes. The demo assistant explains Voxly and does not access customer workspaces or create real tickets.
 
 ## API health
 
