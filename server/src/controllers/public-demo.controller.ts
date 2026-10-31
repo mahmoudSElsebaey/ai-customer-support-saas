@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
-import { getOpenAI, DEFAULT_CHAT_MODEL } from "../lib/openai.js";
+import { getGemini, DEFAULT_GEMINI_MODEL } from "../lib/gemini.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -22,8 +22,8 @@ export const chat = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("A user message is required.", 400, "INVALID_MESSAGE");
   }
 
-  const completion = await getOpenAI().chat.completions.create({
-    model: DEFAULT_CHAT_MODEL,
+  const completion = await getGemini().chat.completions.create({
+    model: DEFAULT_GEMINI_MODEL,
     temperature: 0.6,
     max_tokens: 350,
     messages: [
