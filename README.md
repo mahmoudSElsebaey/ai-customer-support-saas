@@ -10,7 +10,7 @@ Multi-tenant helpdesk with live chat, knowledge base, RAG-assisted AI replies, a
 | Backend | Express.js, TypeScript, Socket.IO |
 | Database | **MongoDB + Mongoose** |
 | Auth | JWT access + refresh cookies |
-| AI | OpenAI (optional) |
+| AI | Google Gemini (public demo) + OpenAI (other optional features) |
 | Billing | Stripe (optional) |
 
 ## Prerequisites
@@ -22,8 +22,8 @@ Multi-tenant helpdesk with live chat, knowledge base, RAG-assisted AI replies, a
 
 ```bash
 # 1) Environment
-cp .env.example server/.env
-# Edit server/.env — set MONGODB_URI, JWT secrets, and OPENAI_API_KEY to enable the live homepage AI demo
+cp server/.env.example server/.env
+# Edit server/.env — set MONGODB_URI, JWT secrets, and GEMINI_API_KEY to enable the live homepage AI demo
 
 # 2) Server
 cd server
@@ -49,13 +49,14 @@ Organization slug: `demo` — portal at `/portal/demo`.
 
 ### Live AI homepage demo
 
-The public homepage includes a live Voxly AI chat at the bottom corner. To enable real replies, add your OpenAI API key to `server/.env`:
+The public homepage includes a live Voxly AI chat at the bottom corner. The demo uses Google's Gemini API. Add your Gemini API key to `server/.env`:
 
 ```env
-OPENAI_API_KEY=your_openai_api_key
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.8-flash
 ```
 
-The key stays server-side. The public demo endpoint is rate-limited to 12 messages per IP per 10 minutes. The demo assistant explains Voxly and does not access customer workspaces or create real tickets. If the frontend and API are hosted on different domains, set `VITE_API_URL` in the client environment to the API origin (for example, `https://api.example.com`) and allow the frontend origin in the server's `CLIENT_URL`.
+The Gemini key stays server-side and is never exposed to the browser. The selected model has a free tier, subject to Google's current model availability and project rate limits. The public demo endpoint is additionally rate-limited to 12 messages per IP per 10 minutes. The demo assistant explains Voxly and does not access customer workspaces or create real tickets. OpenAI remains an optional integration for other existing AI features. If the frontend and API are hosted on different domains, set `VITE_API_URL` in the client environment to the API origin (for example, `https://api.example.com`) and allow the frontend origin in the server's `CLIENT_URL`.
 
 ## API health
 
