@@ -8,13 +8,14 @@ import { DocumentTitle } from "@/components/DocumentTitle";
 import { cn } from "@/lib/utils";
 
 export default function Login() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [login, { isLoading, error }] = useLoginMutation();
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -129,6 +130,52 @@ export default function Login() {
           >
             {isLoading ? t("common.loading") : t("auth.login")}
           </button>
+
+          <div className="border-t border-slate-100 pt-4 space-y-3">
+            <div className="text-center">
+              <p className="text-sm font-semibold text-slate-800">
+                {t("auth.demoAccounts", "Try a demo account")}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                {i18n.language === "ar"
+                  ? "اختر نوع الحساب لملء بيانات الدخول تلقائيًا"
+                  : "Choose an account to fill in the login details"}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { role: "Owner", email: "owner@demo.voxly.app", label: i18n.language === "ar" ? "المالك" : "Owner" },
+                { role: "Agent", email: "agent@demo.voxly.app", label: i18n.language === "ar" ? "موظف الدعم" : "Support agent" },
+              ].map((account) => (
+                <button
+                  key={account.role}
+                  type="button"
+                  onClick={() => {
+                    setValue("email", account.email, { shouldValidate: true });
+                    setValue("password", "Demo1234!", { shouldValidate: true });
+                  }}
+                  className="rounded-lg border border-slate-200 px-3 py-2.5 text-start hover:border-primary-400 hover:bg-primary-50 transition"
+                >
+                  <span className="block text-sm font-semibold text-slate-800">{account.label}</span>
+                  <span className="block text-[11px] text-slate-500 mt-1"> {account.email} </span>
+                </button>
+              ))}
+            </div>
+            <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800">
+                  {i18n.language === "ar" ? "عميل البوابة" : "Portal customer"}
+                </p>
+                <p className="text-[11px] text-slate-500 truncate">customer@demo.voxly.app</p>
+              </div>
+              <Link to="/portal/demo/login" className="shrink-0 text-xs font-semibold text-primary-600 hover:underline">
+                {i18n.language === "ar" ? "دخول العميل" : "Customer login"}
+              </Link>
+            </div>
+            <p className="text-center text-xs text-slate-500">
+              {i18n.language === "ar" ? "كلمة المرور لجميع الحسابات:" : "Password for all demo accounts:"} <span className="font-semibold text-slate-700">Demo1234!</span>
+            </p>
+          </div>
 
           <p className="text-center text-sm text-slate-500">
             {t("auth.noAccount")}{" "}
